@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @repo-auditor/scanner-core && npm run build --workspace @repo-auditor/ai-review --if-present && npm run build --workspace @repo-auditor/cli --if-present",
+    "build": "npm run build --workspace @repo-auditor/scanner-core && npm run build --workspace @repo-auditor/ai-review --if-present && npm run build --workspace @repo-auditor/cli --if-present && npm run build --workspace @repo-auditor/electron --if-present",
     "test": "npm run build --workspace @repo-auditor/scanner-core && vitest run && npm run typecheck --workspaces --if-present",
     "dev:cli": "tsx packages/cli/src/index.ts",
     "dev:electron": "npm --workspace apps/electron run dev",

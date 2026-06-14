@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run tests",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
     "@repo-auditor/scanner-core": "0.1.0",

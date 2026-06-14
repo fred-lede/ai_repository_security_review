@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repository Security Auditor</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f7f9;
+        color: #17202a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+      }
+
+      aside {
+        background: #ffffff;
+        border-right: 1px solid #d9dee7;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      section {
+        padding: 22px 26px;
+      }
+
+      h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+
+      h2 {
+        font-size: 14px;
+        margin: 0 0 10px;
+        color: #526070;
+        text-transform: uppercase;
+        letter-spacing: 0;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        color: #526070;
+        margin-bottom: 6px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid #c8d0dc;
+        border-radius: 6px;
+        padding: 10px 11px;
+        font: inherit;
+        background: #ffffff;
+        color: #17202a;
+      }
+
+      textarea {
+        min-height: 74px;
+        resize: vertical;
+      }
+
+      button {
+        border: 1px solid #1f6feb;
+        border-radius: 6px;
+        background: #1f6feb;
+        color: #ffffff;
+        min-height: 38px;
+        padding: 0 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #ffffff;
+        color: #1f6feb;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #263241;
+      }
+
+      .check input {
+        width: auto;
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .status {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .metric,
+      .panel {
+        background: #ffffff;
+        border: 1px solid #d9dee7;
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 22px;
+        margin-top: 6px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 16px;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .findings {
+        display: grid;
+        gap: 8px;
+        max-height: 55vh;
+        overflow: auto;
+      }
+
+      .finding {
+        border-left: 4px solid #d0d7de;
+      }
+
+      .finding[data-risk="Critical"],
+      .finding[data-risk="High"] {
+        border-left-color: #d1242f;
+      }
+
+      .finding[data-risk="Medium"] {
+        border-left-color: #bf8700;
+      }
+
+      .muted {
+        color: #667586;
+      }
+
+      @media (max-width: 980px) {
+        main,
+        .workspace,
+        .status {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          border-right: 0;
+          border-bottom: 1px solid #d9dee7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <aside>
+        <h1>Repository Security Auditor</h1>
+
+        <div>
+          <h2>Target</h2>
+          <label for="target-type">Input type</label>
+          <select id="target-type">
+            <option>Local Directory</option>
+            <option>File</option>
+            <option>GitHub Repository</option>
+            <option>npm Package</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="target">Target</label>
+          <div class="row">
+            <input id="target" value="fixtures/malicious-package" />
+            <button id="browse" class="secondary" title="Select local target">...</button>
+          </div>
+        </div>
+
+        <div>
+          <h2>Scan</h2>
+          <label for="network-policy">Network policy</label>
+          <select id="network-policy">
+            <option value="offline">offline</option>
+            <option value="no-network">no-network</option>
+            <option value="online">online</option>
+          </select>
+        </div>
+
+        <div>
+          <h2>Outputs</h2>
+          <div class="grid">
+            <label class="check"><input type="checkbox" name="format" value="markdown" checked /> Markdown</label>
+            <label class="check"><input type="checkbox" name="format" value="json" checked /> JSON</label>
+            <label class="check"><input type="checkbox" name="format" value="mermaid" checked /> Mermaid</label>
+            <label class="check"><input type="checkbox" name="format" value="sarif" checked /> SARIF</label>
+          </div>
+        </div>
+
+        <div>
+          <h2>AI Review</h2>
+          <label for="provider-type">Provider</label>
+          <select id="provider-type">
+            <option value="cloud">Cloud</option>
+            <option value="ollama">Ollama</option>
+            <option value="custom">Custom</option>
+          </select>
+          <label for="provider-url">Base URL</label>
+          <input id="provider-url" value="http://localhost:11434" />
+          <label for="provider-model">Model</label>
+          <input id="provider-model" value="llama3.1" />
+          <label for="sharing-mode">Data sharing</label>
+          <select id="sharing-mode">
+            <option value="metadata-only">metadata-only</option>
+            <option value="finding-snippets">finding-snippets</option>
+            <option value="full-files">full-files</option>
+          </select>
+        </div>
+
+        <button id="scan">Run Security Audit</button>
+        <button id="ai-review" class="secondary">Prepare AI Review</button>
+      </aside>
+
+      <section>
+        <div class="toolbar">
+          <div>
+            <h2>Decision</h2>
+            <div id="target-label" class="muted">fixtures/malicious-package</div>
+          </div>
+          <button id="export" class="secondary">Export Reports</button>
+        </div>
+
+        <div class="status">
+          <div class="metric"><span class="muted">Decision</span><strong id="decision">Ready</strong></div>
+          <div class="metric"><span class="muted">Risk</span><strong id="risk">-</strong></div>
+          <div class="metric"><span class="muted">Findings</span><strong id="finding-count">0</strong></div>
+          <div class="metric"><span class="muted">Outbound</span><strong id="outbound-count">0</strong></div>
+        </div>
+
+        <div class="workspace">
+          <div class="panel">
+            <h2>Findings</h2>
+            <div id="findings" class="findings"></div>
+          </div>
+          <div class="panel">
+            <h2>Report Preview</h2>
+            <pre id="preview">No scan has run.</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const state = { result: null };
+      const $ = (id) => document.getElementById(id);
+
+      $("browse").addEventListener("click", async () => {
+        const result = await window.repoAuditor.folderOpen();
+        if (!result.cancelled && result.paths?.[0]) $("target").value = result.paths[0];
+      });
+
+      $("scan").addEventListener("click", async () => {
+        $("decision").textContent = "Running";
+        const outputFormats = [...document.querySelectorAll('input[name="format"]:checked')].map((input) => input.value);
+        state.result = await window.repoAuditor.scanStart({
+          target: $("target").value,
+          networkPolicy: $("network-policy").value,
+          outputFormats
+        });
+        renderResult(state.result);
+      });
+
+      $("ai-review").addEventListener("click", async () => {
+        if (!state.result) return;
+        const review = await window.repoAuditor.aiReviewRun({
+          report: state.result.report,
+          execute: false,
+          provider: {
+            type: $("provider-type").value,
+            baseUrl: $("provider-url").value,
+            model: $("provider-model").value,
+            dataSharingMode: $("sharing-mode").value,
+            redactionEnabled: true,
+            timeoutMs: 30000,
+            retryLimit: 1
+          }
+        });
+        $("preview").textContent = JSON.stringify(review, null, 2);
+      });
+
+      $("export").addEventListener("click", async () => {
+        if (!state.result) return;
+        const outputDir = "reports/electron-export";
+        const exported = await window.repoAuditor.reportExport({ outputDir, outputs: state.result.outputs });
+        $("preview").textContent = JSON.stringify(exported, null, 2);
+      });
+
+      function renderResult(result) {
+        const report = result.report;
+        $("target-label").textContent = report.target.source;
+        $("decision").textContent = report.risk.decision;
+        $("risk").textContent = report.risk.overallRiskLevel;
+        $("finding-count").textContent = String(report.findings.length);
+        $("outbound-count").textContent = String(report.dataFlow.nodes.filter((node) => node.leavesMachine).length);
+        $("preview").textContent = result.outputs.markdown || JSON.stringify(report, null, 2);
+        $("findings").replaceChildren(
+          ...report.findings.map((finding) => {
+            const el = document.createElement("div");
+            el.className = "panel finding";
+            el.dataset.risk = finding.riskLevel;
+            el.innerHTML = `<strong>${finding.riskLevel}</strong> ${finding.category}<br /><span class="muted">${finding.filePath}:${finding.lineStart}</span><p>${finding.explanation}</p>`;
+            return el;
+          })
+        );
+      }
+    </script>
+  </body>
+</html>
