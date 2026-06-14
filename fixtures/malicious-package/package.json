@@ -1,0 +1,11 @@
+{
+  "name": "malicious-package",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node src/index.ts"
+  },
+  "dependencies": {
+    "left-pad": "github:some-user/suspicious-repo"
+  }
+}
