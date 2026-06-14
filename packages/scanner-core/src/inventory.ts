@@ -65,7 +65,12 @@ export async function buildInventory(targetPath: string): Promise<ProjectInvento
     collectRegex(content, /process\.env\.([A-Z0-9_]+)/g, (match) => inventory.environmentVariables.push(match[1]));
     collectRegex(content, /process\.env\[['"]([A-Z0-9_]+)['"]\]/g, (match) => inventory.environmentVariables.push(match[1]));
     collectNetworkEndpoints(content, filePath, inventory.networkEndpoints);
-    collectLineMatches(content, filePath, /(\b(?:exec|spawn|execFile)\s*\(|curl\s+.*\|\s*bash)/, inventory.commandExecutions);
+    collectLineMatches(
+      content,
+      filePath,
+      /((?:^|[^.\w])(?:exec|spawn|execFile)\s*\(|curl\s+.*\|\s*bash)/,
+      inventory.commandExecutions
+    );
     collectLineMatches(
       content,
       filePath,
@@ -139,6 +144,10 @@ function collectRegex(content: string, regex: RegExp, onMatch: (match: RegExpExe
 }
 
 function collectNetworkEndpoints(content: string, filePath: string, output: NetworkEndpoint[]): void {
+  if (isLockfile(filePath)) {
+    return;
+  }
+
   content.split(/\r?\n/).forEach((lineText, index) => {
     for (const endpoint of lineText.matchAll(/https?:\/\/[^\s"'`)]+/g)) {
       output.push({
@@ -149,6 +158,10 @@ function collectNetworkEndpoints(content: string, filePath: string, output: Netw
       });
     }
   });
+}
+
+function isLockfile(filePath: string): boolean {
+  return /(?:^|\/)(?:package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$/.test(filePath);
 }
 
 function collectLineMatches(

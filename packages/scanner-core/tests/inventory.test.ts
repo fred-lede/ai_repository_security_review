@@ -192,6 +192,23 @@ describe("buildInventory", () => {
     expect(inventory.githubWorkflowFiles).toEqual([".github/workflows/ci.yml"]);
     expect(inventory.electronIpcFiles).toEqual(["src/main.ts"]);
   });
+
+  it("does not treat lockfile resolved tarball URLs as runtime network endpoints", async () => {
+    const fixture = await createProject({
+      "package-lock.json": JSON.stringify({
+        packages: {
+          "node_modules/example": {
+            resolved: "https://registry.npmjs.org/example/-/example-1.0.0.tgz"
+          }
+        }
+      }),
+      "src/index.ts": "fetch('https://api.example.test/collect');\n"
+    });
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.networkEndpoints.map((endpoint) => endpoint.endpoint)).toEqual(["https://api.example.test/collect"]);
+  });
 });
 
 async function createProject(files: Record<string, string>): Promise<string> {

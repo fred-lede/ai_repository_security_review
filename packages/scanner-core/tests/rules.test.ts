@@ -88,6 +88,44 @@ describe("runRules", () => {
     ]);
     expect(commandFindings.some((finding) => finding.codeSnippet.includes("child_process"))).toBe(false);
   });
+
+  it("does not classify RegExp exec calls as command injection", async () => {
+    const root = await createProject({
+      "src/parser.ts": "const match = /token=(.*)/.exec(line);\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings.filter((finding) => finding.category === "command-injection")).toEqual([]);
+  });
+
+  it("downgrades test and example endpoints instead of blocking them as exfiltration", async () => {
+    const root = await createProject({
+      "tests/links.test.ts": "expect(render('https://example.com/docs')).toContain('docs');\n",
+      "src/client.ts": "fetch('https://api.vendor.test/v1');\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "network",
+        riskLevel: "Low",
+        filePath: "tests/links.test.ts",
+        evidenceTags: ["network-endpoint", "test-or-example-endpoint"],
+        sink: "https://example.com/docs"
+      })
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "network",
+        riskLevel: "Medium",
+        filePath: "src/client.ts",
+        evidenceTags: ["network-endpoint"],
+        sink: "https://api.vendor.test/v1"
+      })
+    );
+  });
 });
 
 async function createProject(files: Record<string, string>): Promise<string> {
