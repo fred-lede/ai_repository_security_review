@@ -1,6 +1,7 @@
 export const scannerCoreVersion = "0.1.0";
 export {
   assertNoSymlinkArchiveEntry,
+  assertRegularArchiveEntry,
   assertSafeArchiveEntry,
   isSupportedArchive
 } from "./safeArchive.js";

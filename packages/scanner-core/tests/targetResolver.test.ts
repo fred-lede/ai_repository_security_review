@@ -79,4 +79,27 @@ describe("resolveTarget", () => {
     expect(target.networkUsed).toBe(true);
     expect(target.trustBoundary).toBe("archive");
   });
+
+  it("rejects remote archive URLs when network is disabled", async () => {
+    await expect(
+      resolveTarget("http://example.com/source.zip", {
+        reviewMode: "full-audit",
+        networkPolicy: "offline",
+        outputFormats: ["json"]
+      })
+    ).rejects.toThrow("Network access is disabled");
+  });
+
+  it("recognizes https tar.gz remote archive URLs", async () => {
+    const target = await resolveTarget("https://example.com/source.tar.gz", {
+      reviewMode: "full-audit",
+      networkPolicy: "online",
+      outputFormats: ["json"]
+    });
+
+    expect(target.type).toBe("remote-archive");
+    expect(target.localPath).toBeNull();
+    expect(target.networkUsed).toBe(true);
+    expect(target.trustBoundary).toBe("archive");
+  });
 });

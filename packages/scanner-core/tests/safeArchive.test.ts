@@ -1,7 +1,7 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  assertNoSymlinkArchiveEntry,
+  assertRegularArchiveEntry,
   assertSafeArchiveEntry,
   isSupportedArchive
 } from "../src/safeArchive.js";
@@ -15,6 +15,14 @@ describe("safe archive helpers", () => {
     );
   });
 
+  it("allows safe nested POSIX paths", () => {
+    const outputDir = path.resolve("/tmp/out");
+
+    expect(assertSafeArchiveEntry("nested/deeper/file.txt", outputDir)).toBe(
+      path.join(outputDir, "nested/deeper/file.txt")
+    );
+  });
+
   it("rejects parent directory escapes", () => {
     expect(() => assertSafeArchiveEntry("../escape", "/tmp/out")).toThrow(
       "Archive entry escapes output directory"
@@ -24,6 +32,36 @@ describe("safe archive helpers", () => {
   it("rejects absolute POSIX paths", () => {
     expect(() => assertSafeArchiveEntry("/tmp/escape", "/tmp/out")).toThrow(
       "Archive entry uses an absolute path"
+    );
+  });
+
+  it("rejects Windows absolute paths", () => {
+    expect(() => assertSafeArchiveEntry("C:\\temp\\x", "/tmp/out")).toThrow(
+      "Archive entry uses an absolute path"
+    );
+  });
+
+  it("rejects UNC paths", () => {
+    expect(() => assertSafeArchiveEntry("\\\\server\\share\\x", "/tmp/out")).toThrow(
+      "Archive entry uses an absolute path"
+    );
+  });
+
+  it("rejects backslash traversal paths", () => {
+    expect(() => assertSafeArchiveEntry("..\\escape", "/tmp/out")).toThrow(
+      "Archive entry contains backslashes"
+    );
+  });
+
+  it("rejects mixed separator traversal paths", () => {
+    expect(() => assertSafeArchiveEntry("safe\\..\\escape", "/tmp/out")).toThrow(
+      "Archive entry contains backslashes"
+    );
+  });
+
+  it("rejects NUL bytes", () => {
+    expect(() => assertSafeArchiveEntry("safe\0file", "/tmp/out")).toThrow(
+      "Archive entry contains a NUL byte"
     );
   });
 
@@ -41,10 +79,24 @@ describe("safe archive helpers", () => {
   });
 
   it("rejects symlink archive entries", () => {
-    expect(() => assertNoSymlinkArchiveEntry("link", "symlink")).toThrow(
-      "Archive entry is a symlink"
+    expect(() => assertRegularArchiveEntry("link", "symlink")).toThrow(
+      "Archive entry type is not supported"
     );
-    expect(assertNoSymlinkArchiveEntry("file.txt", "file")).toBe("file");
-    expect(assertNoSymlinkArchiveEntry("directory", "directory")).toBe("directory");
+    expect(assertRegularArchiveEntry("file.txt", "file")).toBe("file");
+    expect(assertRegularArchiveEntry("directory", "directory")).toBe("directory");
+  });
+
+  it("rejects non-regular archive entry types", () => {
+    for (const entryType of [
+      "hardlink",
+      "block-device",
+      "character-device",
+      "fifo",
+      "unknown"
+    ] as const) {
+      expect(() => assertRegularArchiveEntry("entry", entryType)).toThrow(
+        "Archive entry type is not supported"
+      );
+    }
   });
 });
