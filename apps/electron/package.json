@@ -1,6 +1,8 @@
 {
   "name": "@repo-auditor/electron",
   "version": "0.1.0",
+  "description": "Desktop shell for Repository Security Auditor",
+  "author": "Repository Security Auditor",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
@@ -15,21 +17,23 @@
   },
   "dependencies": {
     "@repo-auditor/ai-review": "0.1.0",
-    "@repo-auditor/scanner-core": "0.1.0",
-    "electron": "^31.7.7"
+    "@repo-auditor/scanner-core": "0.1.0"
   },
   "devDependencies": {
+    "electron": "31.7.7",
     "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "dev.repo-auditor.desktop",
     "productName": "Repository Security Auditor",
+    "npmRebuild": false,
     "files": [
       "dist/**",
       "src/renderer/index.html"
     ],
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "identity": null
     },
     "win": {
       "target": "nsis"
