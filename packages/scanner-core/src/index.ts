@@ -7,7 +7,14 @@ export {
 } from "./safeArchive.js";
 export { buildInventory } from "./inventory.js";
 export { buildDataFlowGraph } from "./dataFlow.js";
-export { renderDecisionRecord, renderJsonReport, renderMarkdownReport, renderMermaidDataFlow } from "./reporters.js";
+export {
+  renderDecisionRecord,
+  renderJsonReport,
+  renderMarkdownReport,
+  renderMermaidDataFlow,
+  renderRemediationList,
+  renderSarifReport
+} from "./reporters.js";
 export { assessRisk } from "./risk.js";
 export { runRules } from "./rules.js";
 export { resolveTarget } from "./targetResolver.js";

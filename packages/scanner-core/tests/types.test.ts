@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { renderRemediationList, renderSarifReport } from "../src/index.js";
 import type {
   Finding,
   FindingCategory,
@@ -62,5 +63,10 @@ describe("core types", () => {
 
     expect(category).toBe("data-exfiltration");
     expect(outputFormat).toBe("sarif");
+  });
+
+  it("exports SARIF and remediation renderers from the public entrypoint", () => {
+    expect(renderSarifReport).toEqual(expect.any(Function));
+    expect(renderRemediationList).toEqual(expect.any(Function));
   });
 });

