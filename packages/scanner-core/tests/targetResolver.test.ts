@@ -6,13 +6,15 @@ import { resolveTarget } from "../src/targetResolver.js";
 
 describe("resolveTarget", () => {
   it("resolves local directories without network", async () => {
-    const target = await resolveTarget("../../fixtures/benign-package", {
+    const fixturePath = path.resolve("fixtures/benign-package");
+    const target = await resolveTarget(fixturePath, {
       reviewMode: "full-audit",
       networkPolicy: "offline",
       outputFormats: ["json"]
     });
 
     expect(target.type).toBe("local-directory");
+    expect(target.localPath).toBe(fixturePath);
     expect(target.networkUsed).toBe(false);
     expect(target.trustBoundary).toBe("local");
   });
@@ -33,6 +35,7 @@ describe("resolveTarget", () => {
       });
 
       expect(target.type).toBe("local-directory");
+      expect(target.localPath).toBe(path.resolve("left-pad@1.3.0"));
       expect(target.networkUsed).toBe(false);
       expect(target.trustBoundary).toBe("local");
     } finally {
@@ -60,6 +63,7 @@ describe("resolveTarget", () => {
 
     expect(target.type).toBe("npm-package");
     expect(target.source).toBe("left-pad@1.3.0");
+    expect(target.localPath).toBeNull();
     expect(target.networkUsed).toBe(true);
   });
 
@@ -71,6 +75,7 @@ describe("resolveTarget", () => {
     });
 
     expect(target.type).toBe("remote-archive");
+    expect(target.localPath).toBeNull();
     expect(target.networkUsed).toBe(true);
     expect(target.trustBoundary).toBe("archive");
   });

@@ -3,6 +3,7 @@ import type {
   Finding,
   FindingCategory,
   OutputFormat,
+  ResolvedTarget,
   RiskAssessment,
   ScanOptions
 } from "../src/index.js";
@@ -54,6 +55,7 @@ describe("core types", () => {
 
     expectTypeOf<Finding["category"]>().toEqualTypeOf<FindingCategory>();
     expectTypeOf<ScanOptions["outputFormats"]>().toEqualTypeOf<OutputFormat[]>();
+    expectTypeOf<ResolvedTarget["localPath"]>().toEqualTypeOf<string | null>();
     expectTypeOf<RiskAssessment["categoryCounts"]>().toEqualTypeOf<
       Partial<Record<FindingCategory, number>>
     >();

@@ -39,7 +39,7 @@ export interface ScanOptions {
 export interface ResolvedTarget {
   type: TargetType;
   source: string;
-  localPath: string;
+  localPath: string | null;
   provenance: Record<string, string | boolean | number>;
   networkUsed: boolean;
   trustBoundary: "local" | "remote" | "archive";
