@@ -6,6 +6,9 @@ export {
   isSupportedArchive
 } from "./safeArchive.js";
 export { buildInventory } from "./inventory.js";
+export { buildDataFlowGraph } from "./dataFlow.js";
+export { renderDecisionRecord, renderJsonReport, renderMarkdownReport, renderMermaidDataFlow } from "./reporters.js";
+export { assessRisk } from "./risk.js";
 export { runRules } from "./rules.js";
 export { resolveTarget } from "./targetResolver.js";
 export type { DependencySource, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
