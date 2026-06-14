@@ -1,0 +1,26 @@
+{
+  "name": "repository-security-auditor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "vitest run",
+    "dev:cli": "tsx packages/cli/src/index.ts",
+    "dev:electron": "npm --workspace apps/electron run dev",
+    "package:mac": "npm --workspace apps/electron run package:mac",
+    "package:win": "npm --workspace apps/electron run package:win",
+    "package:linux": "npm --workspace apps/electron run package:linux",
+    "package:all": "npm --workspace apps/electron run package:all"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
