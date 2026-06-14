@@ -15,6 +15,13 @@ const blockingCategories: FindingCategory[] = [
 export function assessRisk(findings: Finding[]): RiskAssessment {
   const severityCounts = countByRisk(findings);
   const categoryCounts: Partial<Record<FindingCategory, number>> = {};
+  const sortedFindings = findings
+    .map((finding, index) => ({ finding, index }))
+    .sort((a, b) => {
+      const riskComparison = riskOrder.indexOf(a.finding.riskLevel) - riskOrder.indexOf(b.finding.riskLevel);
+      return riskComparison === 0 ? a.index - b.index : riskComparison;
+    })
+    .map(({ finding }) => finding);
 
   for (const finding of findings) {
     categoryCounts[finding.category] = (categoryCounts[finding.category] ?? 0) + 1;
@@ -25,7 +32,7 @@ export function assessRisk(findings: Finding[]): RiskAssessment {
       finding.riskLevel === "Critical" ||
       (finding.riskLevel === "High" &&
         finding.confidence === "High" &&
-        blockingCategories.includes(finding.category))
+        (blockingCategories.includes(finding.category) || finding.evidenceTags.includes("exfiltration-candidate")))
   );
   const overallRiskLevel = riskOrder.find((risk) => severityCounts[risk] > 0) ?? "Info";
   const decision: Decision =
@@ -44,7 +51,7 @@ export function assessRisk(findings: Finding[]): RiskAssessment {
       decision === "Block"
         ? "One or more findings can expose secrets, execute commands, persist, or send sensitive data outward."
         : "No blocking deterministic evidence was found in the configured scan scope.",
-    topRisks: findings.slice(0, 3).map((finding) => `${finding.riskLevel}: ${finding.explanation}`),
+    topRisks: sortedFindings.slice(0, 3).map((finding) => `${finding.riskLevel}: ${finding.explanation}`),
     severityCounts,
     categoryCounts,
     blockingFindingIds: blocking.map((finding) => finding.id),

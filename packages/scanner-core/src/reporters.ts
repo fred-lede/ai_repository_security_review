@@ -34,16 +34,22 @@ export function renderMarkdownReport(report: AuditReport): string {
 
 export function renderMermaidDataFlow(graph: DataFlowGraph): string {
   const lines = ["flowchart LR"];
+  const nodeIds = new Map(graph.nodes.map((node, index) => [node.id, `n${index}`]));
 
   for (const node of graph.nodes) {
     const shape = node.leavesMachine
       ? `["${escapeMermaid(node.label)}"]:::external`
       : `["${escapeMermaid(node.label)}"]`;
-    lines.push(`  ${safeId(node.id)}${shape}`);
+    lines.push(`  ${nodeIds.get(node.id)}${shape}`);
   }
 
   for (const edge of graph.edges) {
-    lines.push(`  ${safeId(edge.from)} -->|"${escapeMermaid(edge.label)}"| ${safeId(edge.to)}`);
+    const from = nodeIds.get(edge.from);
+    const to = nodeIds.get(edge.to);
+
+    if (from && to) {
+      lines.push(`  ${from} -->|"${escapeMermaid(edge.label)}"| ${to}`);
+    }
   }
 
   lines.push("  classDef external fill:#fee2e2,stroke:#dc2626,stroke-width:2px");
@@ -94,10 +100,6 @@ function renderFinding(finding: Finding): string[] {
     `Recommended Fix: ${finding.recommendedFix}`,
     ""
   ];
-}
-
-function safeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_]/g, "_");
 }
 
 function escapeMermaid(value: string): string {
