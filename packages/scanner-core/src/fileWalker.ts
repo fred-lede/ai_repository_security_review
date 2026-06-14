@@ -4,6 +4,8 @@ export async function listScannableFiles(rootDir: string): Promise<string[]> {
   return fg(
     [
       "**/*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml,sh,bash,zsh,Dockerfile}",
+      "**/Dockerfile",
+      "**/*.Dockerfile",
       ".github/workflows/*.{yml,yaml}"
     ],
     {

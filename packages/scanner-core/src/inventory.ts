@@ -40,8 +40,8 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
     const fullPath = path.join(rootDir, filePath);
     const content = await fs.readFile(fullPath, "utf8").catch(() => "");
 
-    if (filePath === "package.json") {
-      collectPackageJson(content, inventory);
+    if (path.basename(filePath) === "package.json") {
+      collectPackageJson(content, filePath, inventory);
     }
 
     if (filePath.startsWith(".github/workflows/")) {
@@ -66,19 +66,38 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
   return inventory;
 }
 
-function collectPackageJson(content: string, inventory: ProjectInventory): void {
-  const parsed = JSON.parse(content) as {
-    scripts?: Record<string, string>;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
+function collectPackageJson(content: string, filePath: string, inventory: ProjectInventory): void {
+  let parsed: unknown;
 
-  for (const [name, command] of Object.entries(parsed.scripts ?? {})) {
-    inventory.packageScripts.push({ name, command, filePath: "package.json" });
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return;
+  }
+
+  if (!isRecord(parsed)) {
+    return;
+  }
+
+  const scripts = parsed.scripts;
+  if (isRecord(scripts)) {
+    for (const [name, command] of Object.entries(scripts)) {
+      if (typeof command === "string") {
+        inventory.packageScripts.push({ name, command, filePath });
+      }
+    }
   }
 
   for (const deps of [parsed.dependencies, parsed.devDependencies]) {
-    for (const source of Object.values(deps ?? {})) {
+    if (!isRecord(deps)) {
+      continue;
+    }
+
+    for (const source of Object.values(deps)) {
+      if (typeof source !== "string") {
+        continue;
+      }
+
       if (source.startsWith("github:") || source.startsWith("git+") || source.startsWith("http") || source.startsWith("file:")) {
         inventory.dependencySources.push(source);
       }
@@ -107,4 +126,8 @@ function collectLineMatches(
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values)).sort();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
