@@ -40,8 +40,10 @@ describe("reporters", () => {
 
     expect(risk.decision).toBe("Block");
     expect(risk.categoryCounts.network).toBe(2);
-    expect(markdown).toContain("Executive Summary");
-    expect(markdown).toContain("Recommended Fix");
+    expect(markdown).toContain("Repository 安全審查報告");
+    expect(markdown).toContain("執行摘要");
+    expect(markdown).toContain("建議修復方式");
+    expect(markdown).toContain("決策：阻擋 (Block)");
     expect(JSON.parse(renderJsonReport(report))).toEqual(
       expect.objectContaining({
         risk: expect.objectContaining({ decision: "Block" })
@@ -50,6 +52,10 @@ describe("reporters", () => {
     expect(JSON.parse(renderDecisionRecord(report))).toEqual(
       expect.objectContaining({
         decision: "Block",
+        localizedSummary: expect.objectContaining({
+          decision: "阻擋",
+          overallRiskLevel: "嚴重風險"
+        }),
         blockingFindingIds: expect.arrayContaining(risk.blockingFindingIds),
         blockingFindings: expect.arrayContaining([
           expect.objectContaining({
@@ -62,6 +68,7 @@ describe("reporters", () => {
             codeSnippet: expect.any(String),
             explanation: expect.any(String),
             recommendedFix: expect.any(String),
+            localizedRecommendedFix: expect.any(String),
             evidenceTags: expect.any(Array),
             confidence: expect.any(String)
           })
@@ -150,19 +157,23 @@ describe("reporters", () => {
       {
         id: "finding-blocking",
         riskLevel: "Critical",
+        localizedRiskLevel: "嚴重風險",
         filePath: "src/index.ts",
         lineStart: 1,
         explanation: "network risk",
         recommendedFix: "Remove unsafe command execution.",
+        localizedRecommendedFix: "Remove unsafe command execution.",
         decisionRequired: true
       },
       {
         id: "finding-monitor",
         riskLevel: "Low",
+        localizedRiskLevel: "低風險",
         filePath: "src/index.ts",
         lineStart: 1,
         explanation: "network risk",
         recommendedFix: "Document expected telemetry endpoint.",
+        localizedRecommendedFix: "Document expected telemetry endpoint.",
         decisionRequired: false
       }
     ]);

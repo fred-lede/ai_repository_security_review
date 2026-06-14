@@ -6,3 +6,6 @@ coverage
 reports
 scan-workspaces
 *.log
+apps/electron/build/
+apps/electron/release/
+

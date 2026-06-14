@@ -4,7 +4,14 @@ export const allowedIpcChannels = [
   "report:read",
   "report:export",
   "ai-review:run",
-  "folder:open"
+  "ai-models:list",
+  "ai-connection:test",
+  "folder:open",
+  "rules:load",
+  "rules:save",
+  "key:save",
+  "key:load",
+  "key:delete"
 ] as const;
 
 export type AllowedIpcChannel = (typeof allowedIpcChannels)[number];

@@ -15,8 +15,13 @@ export {
   renderRemediationList,
   renderSarifReport
 } from "./reporters.js";
+export { applyBuiltinRules, builtinRules, generateFinding } from "./defaultRules.js";
+export type { BuiltinRule } from "./defaultRules.js";
 export { assessRisk } from "./risk.js";
-export { runRules } from "./rules.js";
+export { compileRule, runRules } from "./rules.js";
+export type { RuleDefinition, RuleMatchCondition, RuleHandler } from "./ruleTypes.js";
+export { loadExternalRules, saveExternalRules } from "./ruleLoader.js";
+export { acquireRemoteTarget, cleanupRemoteDir } from "./remoteAcquisition.js";
 export { scanTarget } from "./scan.js";
 export type { ScanOutputName, ScanResult } from "./scan.js";
 export { resolveTarget } from "./targetResolver.js";
@@ -31,6 +36,7 @@ export type {
   Decision,
   Finding,
   FindingCategory,
+  Language,
   NetworkPolicy,
   OutputFormat,
   Remediation,

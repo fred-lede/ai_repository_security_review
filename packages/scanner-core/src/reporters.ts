@@ -1,34 +1,36 @@
+import { createTranslator, type Language } from "./i18n.js";
 import type { AuditReport, DataFlowGraph, Finding } from "./types.js";
 
-export function renderMarkdownReport(report: AuditReport): string {
+export function renderMarkdownReport(report: AuditReport, lang: Language = "zh-TW"): string {
+  const t = createTranslator(lang);
   return [
-    "# Repository Security Audit Report",
+    `# ${t.t("report.title")}`,
     "",
-    "## Executive Summary",
+    `## ${t.t("report.summary")}`,
     "",
-    `- Overall Risk Level: ${report.risk.overallRiskLevel}`,
-    `- Decision: ${report.risk.decision}`,
-    `- Rationale: ${report.risk.rationale}`,
+    `- ${t.t("report.riskLevel")}：${t.formatRiskLevel(report.risk.overallRiskLevel)}`,
+    `- ${t.t("report.decision")}：${t.formatDecision(report.risk.decision)}`,
+    `- ${t.t("report.rationale")}：${t.rationale(report.risk.rationale)}`,
     "",
-    "## Scope And Provenance",
+    `## ${t.t("report.scope")}`,
     "",
-    `- Target: ${report.target.source}`,
-    `- Target Type: ${report.target.type}`,
-    `- Network Used During Acquisition: ${report.target.networkUsed}`,
-    `- Generated At: ${report.generatedAt}`,
+    `- ${t.t("report.target")}：${report.target.source}`,
+    `- ${t.t("report.targetType")}：${report.target.type}`,
+    `- ${t.t("report.networkUsed")}：${report.target.networkUsed ? t.t("report.yes") : t.t("report.no")}`,
+    `- ${t.t("report.generatedAt")}：${report.generatedAt}`,
     "",
-    "## Findings",
+    `## ${t.t("report.findings")}`,
     "",
-    ...report.findings.flatMap(renderFinding),
-    "## Data Flow",
+    ...report.findings.flatMap((finding) => renderFinding(finding, t)),
+    `## ${t.t("report.dataFlow")}`,
     "",
     "```mermaid",
     renderMermaidDataFlow(report.dataFlow),
     "```",
     "",
-    "## Remediation Plan",
+    `## ${t.t("report.remediation")}`,
     "",
-    ...report.findings.map((finding) => `- ${finding.id}: ${finding.recommendedFix}`)
+    ...report.findings.map((finding) => `- ${finding.id}：${t.recommendedFix(finding.recommendedFix)}`)
   ].join("\n");
 }
 
@@ -56,11 +58,11 @@ export function renderMermaidDataFlow(graph: DataFlowGraph): string {
   return lines.join("\n");
 }
 
-export function renderJsonReport(report: AuditReport): string {
+export function renderJsonReport(report: AuditReport, _lang?: Language): string {
   return JSON.stringify(report, null, 2);
 }
 
-export function renderSarifReport(report: AuditReport): string {
+export function renderSarifReport(report: AuditReport, _lang?: Language): string {
   const rules = report.findings.map((finding) => ({
     id: sarifRuleId(finding),
     name: finding.category,
@@ -123,41 +125,68 @@ export function renderSarifReport(report: AuditReport): string {
   );
 }
 
-export function renderRemediationList(report: AuditReport): string {
+type RemediationEntry = {
+  id: string;
+  riskLevel: string;
+  localizedRiskLevel: string;
+  filePath: string;
+  lineStart: number;
+  explanation: string;
+  recommendedFix: string;
+  localizedRecommendedFix: string;
+  decisionRequired: boolean;
+};
+
+export function renderRemediationList(report: AuditReport, lang: Language = "zh-TW"): string {
+  const t = createTranslator(lang);
   return JSON.stringify(
-    report.findings.map((finding) => ({
-      id: finding.id,
-      riskLevel: finding.riskLevel,
-      filePath: finding.filePath,
-      lineStart: finding.lineStart,
-      explanation: finding.explanation,
-      recommendedFix: finding.recommendedFix,
-      decisionRequired: report.risk.blockingFindingIds.includes(finding.id)
-    })),
+    report.findings.map(
+      (finding): RemediationEntry => ({
+        id: finding.id,
+        riskLevel: finding.riskLevel,
+        localizedRiskLevel: t.riskLevel(finding.riskLevel),
+        filePath: finding.filePath,
+        lineStart: finding.lineStart,
+        explanation: finding.explanation,
+        recommendedFix: finding.recommendedFix,
+        localizedRecommendedFix: t.recommendedFix(finding.recommendedFix),
+        decisionRequired: report.risk.blockingFindingIds.includes(finding.id)
+      })
+    ),
     null,
     2
   );
 }
 
-export function renderDecisionRecord(report: AuditReport): string {
+export function renderDecisionRecord(report: AuditReport, lang: Language = "zh-TW"): string {
+  const t = createTranslator(lang);
   return JSON.stringify(
     {
       decision: report.risk.decision,
       overallRiskLevel: report.risk.overallRiskLevel,
       rationale: report.risk.rationale,
+      localizedSummary: {
+        decision: t.decision(report.risk.decision),
+        overallRiskLevel: t.riskLevel(report.risk.overallRiskLevel),
+        rationale: t.rationale(report.risk.rationale)
+      },
       blockingFindingIds: report.risk.blockingFindingIds,
       blockingFindings: report.findings
         .filter((finding) => report.risk.blockingFindingIds.includes(finding.id))
         .map((finding) => ({
           id: finding.id,
           riskLevel: finding.riskLevel,
+          localizedRiskLevel: t.riskLevel(finding.riskLevel),
           category: finding.category,
+          localizedCategory: t.category(finding.category),
           filePath: finding.filePath,
           lineStart: finding.lineStart,
           lineEnd: finding.lineEnd,
           codeSnippet: finding.codeSnippet,
           explanation: finding.explanation,
+          localizedExplanation: t.explanation(finding.explanation),
           recommendedFix: finding.recommendedFix,
+          localizedRecommendedFix: t.recommendedFix(finding.recommendedFix),
           evidenceTags: finding.evidenceTags,
           confidence: finding.confidence,
           dataFlowId: finding.dataFlowId,
@@ -184,23 +213,23 @@ export function renderDecisionRecord(report: AuditReport): string {
   );
 }
 
-function renderFinding(finding: Finding): string[] {
+function renderFinding(finding: Finding, t: ReturnType<typeof createTranslator>): string[] {
   return [
-    `### ${finding.id}: ${finding.category}`,
+    `### ${finding.id}：${t.category(finding.category)} (${finding.category})`,
     "",
-    `- Risk Level: ${finding.riskLevel}`,
-    `- File Path: ${finding.filePath}:${finding.lineStart}`,
-    `- Confidence: ${finding.confidence}`,
+    `- ${t.t("report.riskLevelLabel")}：${t.formatRiskLevel(finding.riskLevel)}`,
+    `- ${t.t("report.filePath")}：${finding.filePath}:${finding.lineStart}`,
+    `- ${t.t("report.confidence")}：${finding.confidence}`,
     "",
-    "Code Snippet:",
+    `${t.t("report.codeSnippet")}：`,
     "",
     "```text",
     finding.codeSnippet,
     "```",
     "",
-    `Explanation: ${finding.explanation}`,
+    `${t.t("report.explanation")}：${t.explanation(finding.explanation)}`,
     "",
-    `Recommended Fix: ${finding.recommendedFix}`,
+    `${t.t("report.recommendedFix")}：${t.recommendedFix(finding.recommendedFix)}`,
     ""
   ];
 }

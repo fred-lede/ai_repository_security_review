@@ -8,10 +8,11 @@ import {
   renderRemediationList,
   renderSarifReport
 } from "./reporters.js";
+import { acquireRemoteTarget } from "./remoteAcquisition.js";
 import { assessRisk } from "./risk.js";
 import { runRules } from "./rules.js";
 import { resolveTarget } from "./targetResolver.js";
-import type { AuditReport, OutputFormat, ScanOptions } from "./types.js";
+import type { AuditReport, Language, OutputFormat, ScanOptions } from "./types.js";
 
 export type ScanOutputName = OutputFormat | "decision" | "remediation";
 
@@ -23,14 +24,13 @@ export interface ScanResult {
 export async function scanTarget(input: string, options: ScanOptions): Promise<ScanResult> {
   const target = await resolveTarget(input, options);
 
-  if (!target.localPath) {
-    throw new Error("Remote acquisition is not implemented yet. Use a local folder, file, or archive path.");
-  }
+  const scanPath = await acquireRemoteTarget(target);
 
-  const inventory = await buildInventory(target.localPath);
-  const findings = runRules(inventory);
+  const inventory = await buildInventory(scanPath);
+  const findings = runRules(inventory, options.extraRules);
   const dataFlow = buildDataFlowGraph(inventory, findings);
-  const risk = assessRisk(findings);
+  const lang = options.language ?? "zh-TW";
+  const risk = assessRisk(findings, lang);
   const report: AuditReport = {
     target,
     findings,
@@ -42,23 +42,23 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
 
   return {
     report,
-    outputs: renderOutputs(report, options.outputFormats)
+    outputs: renderOutputs(report, options.outputFormats, lang)
   };
 }
 
-function renderOutputs(report: AuditReport, outputFormats: OutputFormat[]): ScanResult["outputs"] {
+function renderOutputs(report: AuditReport, outputFormats: OutputFormat[], lang: Language = "zh-TW"): ScanResult["outputs"] {
   const selectedFormats = new Set(outputFormats);
   const outputs: ScanResult["outputs"] = {
-    decision: renderDecisionRecord(report),
-    remediation: renderRemediationList(report)
+    decision: renderDecisionRecord(report, lang),
+    remediation: renderRemediationList(report, lang)
   };
 
   if (selectedFormats.has("markdown")) {
-    outputs.markdown = renderMarkdownReport(report);
+    outputs.markdown = renderMarkdownReport(report, lang);
   }
 
   if (selectedFormats.has("json")) {
-    outputs.json = renderJsonReport(report);
+    outputs.json = renderJsonReport(report, lang);
   }
 
   if (selectedFormats.has("mermaid")) {
@@ -66,7 +66,7 @@ function renderOutputs(report: AuditReport, outputFormats: OutputFormat[]): Scan
   }
 
   if (selectedFormats.has("sarif")) {
-    outputs.sarif = renderSarifReport(report);
+    outputs.sarif = renderSarifReport(report, lang);
   }
 
   return outputs;

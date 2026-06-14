@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildProviderRequest, requestProviderCompletion } from "../src/providers.js";
+import { buildProviderRequest, listProviderModels, requestProviderCompletion } from "../src/providers.js";
 import type { AiProviderConfig } from "../src/types.js";
 
 const baseConfig: AiProviderConfig = {
@@ -74,5 +74,56 @@ describe("provider requests", () => {
         fetchImpl
       )
     ).resolves.toBe("cloud summary");
+  });
+
+  it("lists installed Ollama models", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "",
+      json: async () => ({
+        models: [
+          { name: "llama3.1:latest", modified_at: "2026-01-01T00:00:00Z" },
+          { name: "codellama:13b", modified_at: "2026-01-02T00:00:00Z" }
+        ]
+      })
+    }));
+
+    await expect(listProviderModels(baseConfig, fetchImpl)).resolves.toEqual([
+      { id: "llama3.1:latest", label: "llama3.1:latest" },
+      { id: "codellama:13b", label: "codellama:13b" }
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "http://localhost:11434/api/tags",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("lists OpenAI-compatible models", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "",
+      json: async () => ({
+        data: [{ id: "gpt-4.1" }, { id: "o4-mini" }]
+      })
+    }));
+
+    await expect(
+      listProviderModels(
+        { ...baseConfig, type: "cloud", baseUrl: "https://api.example.test/v1", apiKey: "secret-key" },
+        fetchImpl
+      )
+    ).resolves.toEqual([
+      { id: "gpt-4.1", label: "gpt-4.1" },
+      { id: "o4-mini", label: "o4-mini" }
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.example.test/v1/models",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ authorization: "Bearer secret-key" })
+      })
+    );
   });
 });

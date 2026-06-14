@@ -184,6 +184,59 @@
         color: #667586;
       }
 
+      .hint {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
+        color: #667586;
+      }
+
+      .hint.error {
+        color: #d1242f;
+      }
+
+      .hint.success {
+        color: #1a7f37;
+      }
+
+      #test-connection {
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #d0d7de;
+        border-top-color: #1f6feb;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+
+      .pulse {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
+      #scan-status {
+        margin-top: 8px;
+      }
+
+      #decision-text.pulse {
+        display: inline;
+      }
+
       @media (max-width: 980px) {
         main,
         .workspace,
@@ -201,30 +254,36 @@
   <body>
     <main>
       <aside>
-        <h1>Repository Security Auditor</h1>
+          <h1 data-i18n="appTitle">Repository Security Auditor</h1>
 
         <div>
-          <h2>Target</h2>
-          <label for="target-type">Input type</label>
+          <h2 data-i18n="target">Target</h2>
+          <label for="target-type" data-i18n="inputType">Input type</label>
           <select id="target-type">
-            <option>Local Directory</option>
-            <option>File</option>
-            <option>GitHub Repository</option>
-            <option>npm Package</option>
+            <option value="directory">Local Directory</option>
+            <option value="file">File</option>
+            <option value="github">GitHub Repository</option>
+            <option value="npm">npm Package</option>
           </select>
         </div>
 
         <div>
-          <label for="target">Target</label>
+          <label id="target-label" for="target">Directory path</label>
           <div class="row">
-            <input id="target" value="fixtures/malicious-package" />
-            <button id="browse" class="secondary" title="Select local target">...</button>
+            <input id="target" placeholder="e.g. /path/to/project" />
+            <button id="browse" class="secondary" data-i18n="browse" title="Browse local files">Browse</button>
           </div>
         </div>
 
         <div>
-          <h2>Scan</h2>
-          <label for="network-policy">Network policy</label>
+          <h2 data-i18n="scan">Scan</h2>
+          <label for="lang" data-i18n="language">Language</label>
+          <select id="lang">
+            <option value="en">English</option>
+            <option value="zh-TW" selected>繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+          <label for="network-policy" data-i18n="networkPolicy">Network policy</label>
           <select id="network-policy">
             <option value="offline">offline</option>
             <option value="no-network">no-network</option>
@@ -233,7 +292,7 @@
         </div>
 
         <div>
-          <h2>Outputs</h2>
+          <h2 data-i18n="exportReports">Outputs</h2>
           <div class="grid">
             <label class="check"><input type="checkbox" name="format" value="markdown" checked /> Markdown</label>
             <label class="check"><input type="checkbox" name="format" value="json" checked /> JSON</label>
@@ -243,18 +302,30 @@
         </div>
 
         <div>
-          <h2>AI Review</h2>
+          <h2 data-i18n="aiProvider">AI Review</h2>
           <label for="provider-type">Provider</label>
           <select id="provider-type">
-            <option value="cloud">Cloud</option>
             <option value="ollama">Ollama</option>
+            <option value="cloud">Cloud</option>
             <option value="custom">Custom</option>
           </select>
-          <label for="provider-url">Base URL</label>
-          <input id="provider-url" value="http://localhost:11434" />
-          <label for="provider-model">Model</label>
-          <input id="provider-model" value="llama3.1" />
-          <label for="sharing-mode">Data sharing</label>
+          <label for="provider-url" data-i18n="baseUrl">Base URL</label>
+          <div class="row">
+            <input id="provider-url" value="http://localhost:11434" />
+            <button id="test-connection" class="secondary" data-i18n="test" title="Test connection to the provider">Test</button>
+          </div>
+          <span id="connection-status" class="hint"></span>
+          <label for="provider-model" data-i18n="model">Model</label>
+          <div class="row">
+            <select id="provider-model">
+              <option value="llama3.1">llama3.1</option>
+            </select>
+            <button id="refresh-models" class="secondary" data-i18n="refresh" title="Detect available models">Refresh</button>
+          </div>
+          <span id="model-status" class="hint" data-i18n="modelsAuto">Models will be detected automatically.</span>
+          <label for="provider-api-key" data-i18n="apiKey">API Key</label>
+          <input id="provider-api-key" type="password" autocomplete="off" data-i18n-placeholder="apiKeyPlaceholder" placeholder="Optional; encrypted & saved" />
+          <label for="sharing-mode" data-i18n="dataSharing">Data sharing</label>
           <select id="sharing-mode">
             <option value="metadata-only">metadata-only</option>
             <option value="finding-snippets">finding-snippets</option>
@@ -262,17 +333,20 @@
           </select>
         </div>
 
-        <button id="scan">Run Security Audit</button>
-        <button id="ai-review" class="secondary">Prepare AI Review</button>
+        <button id="scan" data-i18n="runScan">Run Security Audit</button>
+        <div id="scan-status"></div>
+        <button id="ai-review" class="secondary" data-i18n="prepareAiReview">Prepare AI Review</button>
+        <hr />
+        <button id="edit-rules" class="secondary">Edit Rules</button>
       </aside>
 
       <section>
         <div class="toolbar">
           <div>
-            <h2>Decision</h2>
+            <h2 data-i18n="decision">Decision</h2>
             <div id="target-label" class="muted">fixtures/malicious-package</div>
           </div>
-          <button id="export" class="secondary">Export Reports</button>
+          <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
         </div>
 
         <div class="status">
@@ -284,64 +358,548 @@
 
         <div class="workspace">
           <div class="panel">
-            <h2>Findings</h2>
+            <h2 data-i18n="findings">Findings</h2>
             <div id="findings" class="findings"></div>
           </div>
           <div class="panel">
-            <h2>Report Preview</h2>
+            <h2 data-i18n="reportPreview">Report Preview</h2>
             <pre id="preview">No scan has run.</pre>
           </div>
         </div>
       </section>
     </main>
 
+    <div id="rules-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:10px;padding:22px;max-width:700px;width:94%;max-height:88vh;display:flex;flex-direction:column;">
+        <h2>Custom Rules</h2>
+        <p class="muted" style="font-size:13px;">Edit rules as JSON. They are loaded on every scan. One <code>RuleDefinition</code> per array entry.</p>
+        <textarea id="rules-editor" style="flex:1;min-height:300px;font-family:monospace;font-size:13px;"></textarea>
+        <div class="row" style="margin-top:10px;justify-content:flex-end;">
+          <span id="rules-status" class="hint" style="flex:1;"></span>
+          <button id="rules-cancel" class="secondary" style="margin-right:6px;">Cancel</button>
+          <button id="rules-save">Save</button>
+        </div>
+      </div>
+    </div>
+
     <script>
-      const state = { result: null };
+      const settingsKey = "repo-auditor.ai-settings";
+      const providerDefaults = {
+        ollama: { baseUrl: "http://localhost:11434", model: "llama3.1" },
+        cloud: { baseUrl: "https://api.openai.com/v1", model: "gpt-4.1" },
+        custom: { baseUrl: "http://localhost:11434/v1", model: "custom-model" }
+      };
+      const state = { result: null, aiReview: null };
       const $ = (id) => document.getElementById(id);
 
+      const ui = {
+        en: {
+          appTitle: "Repository Security Auditor",
+          target: "Target",
+          inputType: "Input type",
+          scan: "Scan",
+          language: "Language",
+          networkPolicy: "Network policy",
+          aiProvider: "AI Provider",
+          baseUrl: "Base URL",
+          model: "Model",
+          apiKey: "API Key",
+          dataSharing: "Data sharing",
+          runScan: "Run Security Audit",
+          prepareAiReview: "Prepare AI Review",
+          exportReports: "Export Reports",
+          decision: "Decision",
+          findings: "Findings",
+          reportPreview: "Report Preview",
+          noScan: "No scan has run.",
+          browse: "Browse",
+          test: "Test",
+          refresh: "Refresh",
+          apiKeyPlaceholder: "Optional; encrypted & saved",
+          scanning: "Scanning...",
+          reviewing: "Reviewing...",
+          sendingToAi: "Sending findings to AI provider...",
+          aiReviewFailed: "AI review failed",
+          scanFailed: "Scan failed",
+          detectingModels: "Detecting models...",
+          modelsAuto: "Models will be detected automatically.",
+          dir: "Directory path",
+          file: "File path",
+          repo: "Repository URL",
+          npm: "Package name",
+          dirPlh: "e.g. /path/to/project",
+          filePlh: "e.g. /path/to/file.js",
+          repoPlh: "https://github.com/user/repo",
+          npmPlh: "package-name or @scope/package@1.0.0",
+          error: "Error",
+          running: "Running"
+        },
+        "zh-TW": {
+          appTitle: "Repository 安全審查工具",
+          target: "掃描目標",
+          inputType: "輸入類型",
+          scan: "掃描",
+          language: "語言",
+          networkPolicy: "網路策略",
+          aiProvider: "AI 提供者",
+          baseUrl: "基礎 URL",
+          model: "模型",
+          apiKey: "API 金鑰",
+          dataSharing: "資料分享",
+          runScan: "執行安全審查",
+          prepareAiReview: "準備 AI 審查",
+          exportReports: "匯出報告",
+          decision: "決策",
+          findings: "發現項目",
+          reportPreview: "報告預覽",
+          noScan: "尚未執行掃描。",
+          browse: "瀏覽",
+          test: "測試",
+          refresh: "重新整理",
+          apiKeyPlaceholder: "選填；加密儲存",
+          scanning: "掃描中...",
+          reviewing: "AI 審查中...",
+          sendingToAi: "正在傳送發現項目給 AI 提供者...",
+          aiReviewFailed: "AI 審查失敗",
+          scanFailed: "掃描失敗",
+          detectingModels: "正在偵測模型...",
+          modelsAuto: "模型將自動偵測。",
+          dir: "目錄路徑",
+          file: "檔案路徑",
+          repo: "儲存庫 URL",
+          npm: "套件名稱",
+          dirPlh: "例如 /path/to/project",
+          filePlh: "例如 /path/to/file.js",
+          repoPlh: "https://github.com/user/repo",
+          npmPlh: "package-name 或 @scope/package@1.0.0",
+          error: "錯誤",
+          running: "執行中"
+        },
+        "zh-CN": {
+          appTitle: "仓库安全审查工具",
+          target: "扫描目标",
+          inputType: "输入类型",
+          scan: "扫描",
+          language: "语言",
+          networkPolicy: "网络策略",
+          aiProvider: "AI 提供者",
+          baseUrl: "基础 URL",
+          model: "模型",
+          apiKey: "API 密钥",
+          dataSharing: "数据分享",
+          runScan: "执行安全审查",
+          prepareAiReview: "准备 AI 审查",
+          exportReports: "导出报告",
+          decision: "决策",
+          findings: "发现项",
+          reportPreview: "报告预览",
+          noScan: "尚未执行扫描。",
+          browse: "浏览",
+          test: "测试",
+          refresh: "刷新",
+          apiKeyPlaceholder: "选填；加密保存",
+          scanning: "扫描中...",
+          reviewing: "AI 审查中...",
+          sendingToAi: "正在发送发现项给 AI 提供者...",
+          aiReviewFailed: "AI 审查失败",
+          scanFailed: "扫描失败",
+          detectingModels: "正在检测模型...",
+          modelsAuto: "模型将自动检测。",
+          dir: "目录路径",
+          file: "文件路径",
+          repo: "仓库 URL",
+          npm: "包名称",
+          dirPlh: "例如 /path/to/project",
+          filePlh: "例如 /path/to/file.js",
+          repoPlh: "https://github.com/user/repo",
+          npmPlh: "package-name 或 @scope/package@1.0.0",
+          error: "错误",
+          running: "运行中"
+        }
+      };
+
+      const riskLevelLabels = {
+        en: { Critical: "Critical", High: "High", Medium: "Medium", Low: "Low", Info: "Info" },
+        "zh-TW": { Critical: "嚴重風險", High: "高風險", Medium: "中風險", Low: "低風險", Info: "資訊" },
+        "zh-CN": { Critical: "严重风险", High: "高风险", Medium: "中风险", Low: "低风险", Info: "信息" }
+      };
+
+      const categoryLabels = {
+        en: {
+          "data-exfiltration": "Data Exfiltration", "credential-leakage": "Credential Leakage",
+          "hidden-telemetry": "Hidden Telemetry", tracking: "Tracking",
+          "remote-code-execution": "Remote Code Execution", "command-injection": "Command Injection",
+          "supply-chain": "Supply Chain Risk", "postinstall-script": "Postinstall Script",
+          "github-actions": "GitHub Actions Risk", "electron-ipc": "Electron IPC Risk",
+          persistence: "Persistence Mechanism", network: "Network Communication",
+          filesystem: "Filesystem Access", environment: "Environment Variable Access",
+          database: "Database Access"
+        },
+        "zh-TW": {
+          "data-exfiltration": "資料外洩", "credential-leakage": "憑證洩漏",
+          "hidden-telemetry": "隱藏遙測", tracking: "追蹤行為",
+          "remote-code-execution": "遠端程式碼執行", "command-injection": "命令注入",
+          "supply-chain": "供應鏈風險", "postinstall-script": "安裝後腳本",
+          "github-actions": "GitHub Actions 風險", "electron-ipc": "Electron IPC 風險",
+          persistence: "持久化機制", network: "網路通訊",
+          filesystem: "檔案系統存取", environment: "環境變數存取",
+          database: "資料庫存取"
+        },
+        "zh-CN": {
+          "data-exfiltration": "数据泄露", "credential-leakage": "凭证泄露",
+          "hidden-telemetry": "隐藏遥测", tracking: "追踪行为",
+          "remote-code-execution": "远程代码执行", "command-injection": "命令注入",
+          "supply-chain": "供应链风险", "postinstall-script": "安装后脚本",
+          "github-actions": "GitHub Actions 风险", "electron-ipc": "Electron IPC 风险",
+          persistence: "持久化机制", network: "网络通信",
+          filesystem: "文件系统访问", environment: "环境变量访问",
+          database: "数据库访问"
+        }
+      };
+
+      const explanationLabels = {
+        en: {
+          "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.":
+            "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.",
+          "Dependency source uses git, HTTP, tarball, or local file resolution rather than a pinned registry version.":
+            "Dependency source uses git, HTTP, tarball, or local file resolution rather than a pinned registry version.",
+          "The code invokes shell or process execution. If user-controlled data reaches this call, it can become command injection or RCE.":
+            "The code invokes shell or process execution. If user-controlled data reaches this call, it can become command injection or RCE.",
+          "The project contains outbound network communication near sensitive local sources or process execution, making this an exfiltration candidate. Review whether sensitive data can flow to this destination.":
+            "The project contains outbound network communication near sensitive local sources or process execution, making this an exfiltration candidate. Review whether sensitive data can flow to this destination.",
+          "The project communicates with an external endpoint. Confirm this behavior is expected.":
+            "The project communicates with an external endpoint. Confirm this behavior is expected.",
+          "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
+            "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code."
+        },
+        "zh-TW": {
+          "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.":
+            "此套件定義了安裝生命週期腳本。這類腳本會在安裝期間執行，可能在使用者審查前就執行程式碼。",
+          "Dependency source uses git, HTTP, tarball, or local file resolution rather than a pinned registry version.":
+            "相依套件來源使用 git、HTTP、tarball 或本機檔案，而不是固定的 registry 版本。",
+          "The code invokes shell or process execution. If user-controlled data reaches this call, it can become command injection or RCE.":
+            "此程式碼會啟動 shell 或子程序。如果使用者可控資料流入此呼叫，可能形成命令注入或遠端程式碼執行。",
+          "The project contains outbound network communication near sensitive local sources or process execution, making this an exfiltration candidate. Review whether sensitive data can flow to this destination.":
+            "專案在敏感本機來源或程序執行附近存在對外網路通訊，因此屬於可能資料外洩候選。請審查敏感資料是否可能流向此目的地。",
+          "The project communicates with an external endpoint. Confirm this behavior is expected.":
+            "專案會與外部端點通訊。請確認此行為是否符合預期。",
+          "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
+            "專案在測試、fixture、localhost 或範例情境中引用端點。請確認它不會被正式環境程式碼使用。"
+        },
+        "zh-CN": {
+          "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.":
+            "此包定义了安装生命周期脚本。这类脚本会在安装期间执行，可能在用户审查前就执行代码。",
+          "Dependency source uses git, HTTP, tarball, or local file resolution rather than a pinned registry version.":
+            "依赖来源使用 git、HTTP、tarball 或本地文件，而不是固定的 registry 版本。",
+          "The code invokes shell or process execution. If user-controlled data reaches this call, it can become command injection or RCE.":
+            "此代码会启动 shell 或子进程。如果用户可控数据流入此调用，可能形成命令注入或远程代码执行。",
+          "The project contains outbound network communication near sensitive local sources or process execution, making this an exfiltration candidate. Review whether sensitive data can flow to this destination.":
+            "项目在敏感本地来源或进程执行附近存在对外网络通信，因此属于可能数据泄露候选。请审查敏感数据是否可能流向此目的地。",
+          "The project communicates with an external endpoint. Confirm this behavior is expected.":
+            "项目会与外部端点通信。请确认此行为是否符合预期。",
+          "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
+            "项目在测试、fixture、localhost 或示例情境中引用端点。请确认它不会被正式环境代码使用。"
+        }
+      };
+
+      function localizedRisk(r) { return riskLevelLabels[currentLang()]?.[r] ?? r; }
+      function localizedCategory(c) { return categoryLabels[currentLang()]?.[c] ?? c; }
+      function localizedExplanation(e) { return explanationLabels[currentLang()]?.[e] ?? e; }
+
+      function currentLang() {
+        return $("lang")?.value ?? "zh-TW";
+      }
+
+      function t(key) {
+        const lang = currentLang();
+        return ui[lang]?.[key] ?? ui.en?.[key] ?? key;
+      }
+
+      function applyTranslations() {
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          el.textContent = t(key);
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-placeholder");
+          el.placeholder = t(key);
+        });
+        const type = $("target-type")?.value;
+        if (type) updateTargetUI();
+      }
+
+      const restoredSettings = restoreAiSettings();
+      setFallbackModels(restoredSettings.model);
+      void restoreApiKey().then(() => detectProviderModels());
+
+      const targetConfig = {
+        directory: { labelKey: "dir", placeholderKey: "dirPlh", browse: true, browseType: "openDirectory" },
+        file: { labelKey: "file", placeholderKey: "filePlh", browse: true, browseType: "openFile" },
+        github: { labelKey: "repo", placeholderKey: "repoPlh", browse: false },
+        npm: { labelKey: "npm", placeholderKey: "npmPlh", browse: false }
+      };
+
+      function updateTargetUI() {
+        const type = $("target-type").value;
+        const cfg = targetConfig[type];
+        $("target-label").textContent = t(cfg.labelKey);
+        $("target").placeholder = t(cfg.placeholderKey);
+        $("browse").style.display = cfg.browse ? "" : "none";
+        const isRemote = type === "github" || type === "npm";
+        $("network-policy").value = isRemote ? "online" : "offline";
+      }
+
+      $("target-type").addEventListener("change", updateTargetUI);
+      updateTargetUI();
+      applyTranslations();
+
+      $("lang").addEventListener("change", () => {
+        applyTranslations();
+        if (state.result) renderResult(state.result);
+        void detectProviderModels();
+      });
+
       $("browse").addEventListener("click", async () => {
-        const result = await window.repoAuditor.folderOpen();
-        if (!result.cancelled && result.paths?.[0]) $("target").value = result.paths[0];
+        const type = $("target-type").value;
+        if (type === "file") {
+          const result = await window.repoAuditor.folderOpen();
+          if (!result.cancelled && result.paths?.[0]) $("target").value = result.paths[0];
+        } else {
+          const result = await window.repoAuditor.folderOpen();
+          if (!result.cancelled && result.paths?.[0]) $("target").value = result.paths[0];
+        }
+      });
+
+      $("provider-type").addEventListener("change", () => {
+        const defaults = providerDefaults[$("provider-type").value];
+        $("provider-url").value = defaults.baseUrl;
+        setFallbackModels(defaults.model);
+        saveAiSettings();
+        clearConnectionStatus();
+        void detectProviderModels();
+      });
+
+      function clearConnectionStatus() {
+        $("connection-status").textContent = "";
+        $("connection-status").className = "hint";
+      }
+
+      $("provider-url").addEventListener("change", () => {
+        saveAiSettings();
+        clearConnectionStatus();
+        void detectProviderModels();
+      });
+
+      $("provider-api-key").addEventListener("change", () => {
+        const key = $("provider-api-key").value;
+        if (key) {
+          window.repoAuditor.keySave({ apiKey: key });
+        } else {
+          window.repoAuditor.keyDelete();
+        }
+        clearConnectionStatus();
+        void detectProviderModels();
+      });
+      $("provider-model").addEventListener("change", saveAiSettings);
+      $("sharing-mode").addEventListener("change", saveAiSettings);
+      $("refresh-models").addEventListener("click", () => void detectProviderModels());
+
+      $("test-connection").addEventListener("click", async () => {
+        const statusEl = $("connection-status");
+        statusEl.textContent = "Testing connection...";
+        statusEl.className = "hint";
+        $("test-connection").disabled = true;
+
+        try {
+          const result = await window.repoAuditor.aiConnectionTest({
+            provider: {
+              type: $("provider-type").value,
+              baseUrl: $("provider-url").value,
+              apiKey: $("provider-api-key").value || undefined
+            }
+          });
+
+          if (result.ok) {
+            statusEl.textContent = `Connected (HTTP ${result.status})`;
+            statusEl.className = "hint success";
+          } else {
+            statusEl.textContent = `Connection failed: ${result.error}`;
+            statusEl.className = "hint error";
+          }
+        } catch (error) {
+          statusEl.textContent = `Connection test error: ${error instanceof Error ? error.message : "unknown"}`;
+          statusEl.className = "hint error";
+        } finally {
+          $("test-connection").disabled = false;
+        }
       });
 
       $("scan").addEventListener("click", async () => {
-        $("decision").textContent = "Running";
+        const scanStatus = $("scan-status");
+        const scanBtn = $("scan");
+        scanBtn.disabled = true;
+        $("decision").textContent = t("running");
+        $("decision").style.color = "#1f6feb";
+        $("decision").className = "pulse";
+        scanStatus.className = "hint";
+        scanStatus.innerHTML = `<span class="spinner"></span>${t("scanning")}`;
+
         const outputFormats = [...document.querySelectorAll('input[name="format"]:checked')].map((input) => input.value);
-        state.result = await window.repoAuditor.scanStart({
-          target: $("target").value,
-          networkPolicy: $("network-policy").value,
-          outputFormats
-        });
-        renderResult(state.result);
+        try {
+          state.result = await window.repoAuditor.scanStart({
+            target: $("target").value,
+            networkPolicy: $("network-policy").value,
+            outputFormats,
+            language: currentLang()
+          });
+          renderResult(state.result);
+          scanStatus.textContent = "";
+          $("decision").className = "";
+          $("decision").style.color = "";
+        } catch (error) {
+          scanStatus.className = "hint error";
+          scanStatus.textContent = `${t("scanFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
+          $("decision").textContent = t("error");
+          $("decision").className = "";
+          $("decision").style.color = "#d1242f";
+        } finally {
+          scanBtn.disabled = false;
+        }
       });
 
       $("ai-review").addEventListener("click", async () => {
         if (!state.result) return;
-        const review = await window.repoAuditor.aiReviewRun({
-          report: state.result.report,
-          execute: false,
-          provider: {
-            type: $("provider-type").value,
-            baseUrl: $("provider-url").value,
-            model: $("provider-model").value,
-            dataSharingMode: $("sharing-mode").value,
-            redactionEnabled: true,
-            timeoutMs: 30000,
-            retryLimit: 1
-          }
-        });
-        $("preview").textContent = JSON.stringify(review, null, 2);
+        const reviewBtn = $("ai-review");
+        reviewBtn.disabled = true;
+        reviewBtn.textContent = t("reviewing");
+        $("preview").innerHTML = `<span class="spinner"></span>${t("sendingToAi")}`;
+
+        try {
+          state.aiReview = await window.repoAuditor.aiReviewRun({
+            report: state.result.report,
+            execute: true,
+            provider: {
+              language: currentLang(),
+              type: $("provider-type").value,
+              baseUrl: $("provider-url").value,
+              model: $("provider-model").value,
+              apiKey: $("provider-api-key").value || undefined,
+              dataSharingMode: $("sharing-mode").value,
+              redactionEnabled: true,
+              timeoutMs: 120000,
+              retryLimit: 1
+            }
+          });
+          $("preview").className = "";
+          $("preview").textContent = JSON.stringify(state.aiReview, null, 2);
+        } catch (error) {
+          $("preview").className = "hint error";
+          $("preview").textContent = `${t("aiReviewFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
+        } finally {
+          reviewBtn.disabled = false;
+          reviewBtn.textContent = t("prepareAiReview");
+        }
       });
 
       $("export").addEventListener("click", async () => {
         if (!state.result) return;
         const outputDir = "reports/electron-export";
-        const exported = await window.repoAuditor.reportExport({ outputDir, outputs: state.result.outputs });
+        const exported = await window.repoAuditor.reportExport({
+          outputDir,
+          outputs: state.result.outputs,
+          aiReview: state.aiReview ?? undefined
+        });
         $("preview").textContent = JSON.stringify(exported, null, 2);
       });
 
+      async function detectProviderModels() {
+        $("model-status").textContent = "Detecting models...";
+        $("model-status").className = "hint";
+        $("refresh-models").disabled = true;
+        const selectedModel = $("provider-model").value || providerDefaults[$("provider-type").value].model;
+
+        try {
+          const models = await window.repoAuditor.aiModelsList({
+            provider: {
+              type: $("provider-type").value,
+              baseUrl: $("provider-url").value,
+              apiKey: $("provider-api-key").value || undefined
+            }
+          });
+
+          if (Array.isArray(models) && models.length > 0) {
+            renderModelOptions(models, selectedModel);
+            $("model-status").textContent = `${models.length} model(s) detected.`;
+          } else {
+            setFallbackModels(selectedModel);
+            $("model-status").textContent = "No models detected from provider; using the saved or default model.";
+            $("model-status").className = "hint error";
+          }
+        } catch (error) {
+          setFallbackModels(selectedModel);
+          $("model-status").textContent = `Model detection failed: ${error instanceof Error ? error.message : "provider unavailable"}`;
+          $("model-status").className = "hint error";
+        } finally {
+          $("refresh-models").disabled = false;
+          saveAiSettings();
+        }
+      }
+
+      function renderModelOptions(models, selectedModel) {
+        const options = models.map((model) => {
+          const option = document.createElement("option");
+          option.value = model.id;
+          option.textContent = model.label || model.id;
+          return option;
+        });
+        $("provider-model").replaceChildren(...options);
+        $("provider-model").value = models.some((model) => model.id === selectedModel) ? selectedModel : models[0].id;
+      }
+
+      function setFallbackModels(model) {
+        const option = document.createElement("option");
+        option.value = model;
+        option.textContent = model;
+        $("provider-model").replaceChildren(option);
+        $("provider-model").value = model;
+      }
+
+      function restoreAiSettings() {
+        try {
+          const settings = JSON.parse(localStorage.getItem(settingsKey) || "{}");
+          if (settings.providerType && providerDefaults[settings.providerType]) $("provider-type").value = settings.providerType;
+          $("provider-url").value = settings.baseUrl || providerDefaults[$("provider-type").value].baseUrl;
+          if (settings.sharingMode) $("sharing-mode").value = settings.sharingMode;
+          return {
+            model: settings.model || providerDefaults[$("provider-type").value].model
+          };
+        } catch {
+          $("provider-url").value = providerDefaults[$("provider-type").value].baseUrl;
+          return {
+            model: providerDefaults[$("provider-type").value].model
+          };
+        }
+      }
+
+      function saveAiSettings() {
+        localStorage.setItem(settingsKey, JSON.stringify({
+          providerType: $("provider-type").value,
+          baseUrl: $("provider-url").value,
+          model: $("provider-model").value,
+          sharingMode: $("sharing-mode").value
+        }));
+      }
+
+      async function restoreApiKey() {
+        try {
+          const result = await window.repoAuditor.keyLoad();
+          if (result.ok && result.apiKey) $("provider-api-key").value = result.apiKey;
+        } catch { /* safeStorage unavailable, key stays empty */ }
+      }
+
       function renderResult(result) {
         const report = result.report;
+        const lang = currentLang();
         $("target-label").textContent = report.target.source;
         $("decision").textContent = report.risk.decision;
         $("risk").textContent = report.risk.overallRiskLevel;
@@ -353,11 +911,62 @@
             const el = document.createElement("div");
             el.className = "panel finding";
             el.dataset.risk = finding.riskLevel;
-            el.innerHTML = `<strong>${finding.riskLevel}</strong> ${finding.category}<br /><span class="muted">${finding.filePath}:${finding.lineStart}</span><p>${finding.explanation}</p>`;
+            el.innerHTML = `<strong>${localizedRisk(finding.riskLevel)}</strong> ${localizedCategory(finding.category)}<br /><span class="muted">${finding.filePath}:${finding.lineStart}</span><p>${localizedExplanation(finding.explanation)}</p>`;
             return el;
           })
         );
       }
+
+      // --- Rules Editor ---
+      $("edit-rules").addEventListener("click", async () => {
+        const modal = $("rules-modal");
+        modal.style.display = "flex";
+        const editor = $("rules-editor");
+        $("rules-status").textContent = "Loading...";
+        try {
+          const rules = await window.repoAuditor.rulesLoad();
+          editor.value = rules.length > 0 ? JSON.stringify(rules, null, 2) : JSON.stringify([
+            {
+              id: "example-rule",
+              description: "Detects endpoints with 'telemetry' in the path",
+              category: "hidden-telemetry",
+              defaultRiskLevel: "Medium",
+              inventoryField: "networkEndpoints",
+              conditions: [{ field: "endpoint", operator: "contains", value: "telemetry" }],
+              explanation: "Found a telemetry endpoint that may send data externally.",
+              recommendedFix: "Verify the endpoint is documented and expected.",
+              tags: ["telemetry"]
+            }
+          ], null, 2);
+          $("rules-status").textContent = "";
+        } catch (e) {
+          editor.value = "[]";
+          $("rules-status").textContent = "Load failed: " + (e.message || e);
+        }
+      });
+
+      $("rules-cancel").addEventListener("click", () => {
+        $("rules-modal").style.display = "none";
+      });
+
+      $("rules-modal").addEventListener("click", (e) => {
+        if (e.target === $("rules-modal")) $("rules-modal").style.display = "none";
+      });
+
+      $("rules-save").addEventListener("click", async () => {
+        const status = $("rules-status");
+        const editor = $("rules-editor");
+        try {
+          const rules = JSON.parse(editor.value);
+          if (!Array.isArray(rules)) throw new Error("Must be a JSON array");
+          await window.repoAuditor.rulesSave(rules);
+          status.textContent = "Saved! Loaded on next scan.";
+          status.className = "hint success";
+        } catch (e) {
+          status.textContent = "Invalid JSON: " + (e.message || e);
+          status.className = "hint error";
+        }
+      });
     </script>
   </body>
 </html>

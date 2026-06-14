@@ -11,7 +11,7 @@ describe("scan orchestration", () => {
     });
 
     expect(result.report.risk.decision).toBe("Block");
-    expect(result.outputs.markdown).toContain("Repository Security Audit Report");
+    expect(result.outputs.markdown).toContain("Repository 安全審查報告");
     expect(JSON.parse(result.outputs.json ?? "{}")).toEqual(
       expect.objectContaining({
         risk: expect.objectContaining({ decision: "Block" })
@@ -37,14 +37,25 @@ describe("scan orchestration", () => {
     );
   });
 
-  it("rejects unresolved remote targets before inventory building", async () => {
+  it("clones and scans remote GitHub targets", async () => {
+    const result = await scanTarget("https://github.com/grinev/opencode-telegram-bot.git", {
+      reviewMode: "full-audit",
+      networkPolicy: "online",
+      outputFormats: ["json"]
+    });
+    expect(result.report.target.type).toBe("github");
+    expect(result.report.target.trustBoundary).toBe("remote");
+    expect(result.report.target.networkUsed).toBe(true);
+  });
+
+  it("rejects remote targets when network is disabled", async () => {
     await expect(
       scanTarget("https://github.com/grinev/opencode-telegram-bot.git", {
         reviewMode: "full-audit",
-        networkPolicy: "online",
+        networkPolicy: "offline",
         outputFormats: ["json"]
       })
-    ).rejects.toThrow("Remote acquisition is not implemented yet");
+    ).rejects.toThrow(/Network access is disabled/);
   });
 
   it("can inventory a single local source file", async () => {

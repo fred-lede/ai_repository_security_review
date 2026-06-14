@@ -1,6 +1,8 @@
 export type AiProviderType = "cloud" | "ollama" | "custom";
 export type AiDataSharingMode = "metadata-only" | "finding-snippets" | "full-files";
 
+export type AiLanguage = "en" | "zh-TW" | "zh-CN";
+
 export interface AiProviderConfig {
   type: AiProviderType;
   baseUrl: string;
@@ -10,6 +12,7 @@ export interface AiProviderConfig {
   redactionEnabled: boolean;
   timeoutMs: number;
   retryLimit: number;
+  language?: AiLanguage;
 }
 
 export interface AiReviewResult {

@@ -8,12 +8,17 @@ export interface ProviderRequest {
   retryLimit: number;
 }
 
+export interface ProviderModel {
+  id: string;
+  label: string;
+}
+
 export type FetchLike = (
   input: string,
   init: {
-    method: "POST";
+    method: "GET" | "POST";
     headers: Record<string, string>;
-    body: string;
+    body?: string;
     signal?: AbortSignal;
   }
 ) => Promise<{
@@ -51,6 +56,34 @@ export function buildProviderRequest(config: AiProviderConfig, prompt: string): 
   };
 }
 
+export async function listProviderModels(
+  config: Pick<AiProviderConfig, "type" | "baseUrl" | "apiKey" | "timeoutMs">,
+  fetchImpl: FetchLike = globalThis.fetch as FetchLike
+): Promise<ProviderModel[]> {
+  const baseUrl = config.baseUrl.replace(/\/$/, "");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+
+  try {
+    const response = await fetchImpl(config.type === "ollama" ? `${baseUrl}/api/tags` : `${baseUrl}/models`, {
+      method: "GET",
+      headers: {
+        "content-type": "application/json",
+        ...(config.type !== "ollama" && config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {})
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Provider model request failed with HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    return extractProviderModels(config.type, await response.json());
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function requestProviderCompletion(
   config: AiProviderConfig,
   prompt: string,
@@ -84,6 +117,34 @@ export async function requestProviderCompletion(
   }
 
   throw lastError instanceof Error ? lastError : new Error("Provider request failed");
+}
+
+function extractProviderModels(providerType: AiProviderConfig["type"], payload: unknown): ProviderModel[] {
+  if (!isRecord(payload)) {
+    throw new Error("Provider returned a non-object model response");
+  }
+
+  if (providerType === "ollama") {
+    const models = payload.models;
+    if (!Array.isArray(models)) {
+      return [];
+    }
+
+    return models
+      .map((model) => (isRecord(model) && typeof model.name === "string" ? model.name : undefined))
+      .filter((name): name is string => Boolean(name))
+      .map((name) => ({ id: name, label: name }));
+  }
+
+  const data = payload.data;
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((model) => (isRecord(model) && typeof model.id === "string" ? model.id : undefined))
+    .filter((id): id is string => Boolean(id))
+    .map((id) => ({ id, label: id }));
 }
 
 function extractCompletionText(providerType: AiProviderConfig["type"], payload: unknown): string {

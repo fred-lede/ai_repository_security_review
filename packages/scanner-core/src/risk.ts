@@ -1,3 +1,4 @@
+import { createTranslator, type Language } from "./i18n.js";
 import type { Decision, Finding, FindingCategory, RiskAssessment, RiskLevel } from "./types.js";
 
 const riskOrder: RiskLevel[] = ["Critical", "High", "Medium", "Low", "Info"];
@@ -12,7 +13,8 @@ const blockingCategories: FindingCategory[] = [
   "github-actions"
 ];
 
-export function assessRisk(findings: Finding[]): RiskAssessment {
+export function assessRisk(findings: Finding[], lang: Language = "zh-TW"): RiskAssessment {
+  const t = createTranslator(lang);
   const severityCounts = countByRisk(findings);
   const categoryCounts: Partial<Record<FindingCategory, number>> = {};
   const sortedFindings = findings
@@ -55,9 +57,8 @@ export function assessRisk(findings: Finding[]): RiskAssessment {
     severityCounts,
     categoryCounts,
     blockingFindingIds: blocking.map((finding) => finding.id),
-    residualRisk:
-      "Static analysis cannot prove every runtime path. Review dynamic behavior before trusting high-risk packages.",
-    scanLimitations: ["Static analysis only", "No target code execution", "Limited interprocedural taint analysis"]
+    residualRisk: t.residualRisk,
+    scanLimitations: t.scanLimitations
   };
 }
 

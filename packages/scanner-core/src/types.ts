@@ -30,10 +30,14 @@ export type FindingCategory =
   | "environment"
   | "database";
 
+export type Language = "en" | "zh-TW" | "zh-CN";
+
 export interface ScanOptions {
   reviewMode: ReviewMode;
   networkPolicy: NetworkPolicy;
   outputFormats: OutputFormat[];
+  language?: Language;
+  extraRules?: import("./ruleTypes.js").RuleDefinition[];
 }
 
 export interface ResolvedTarget {
