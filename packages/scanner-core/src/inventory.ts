@@ -13,12 +13,19 @@ export interface DependencySource {
   filePath: string;
 }
 
+export interface NetworkEndpoint {
+  endpoint: string;
+  filePath: string;
+  line: number;
+  snippet: string;
+}
+
 export interface ProjectInventory {
   files: string[];
   packageScripts: PackageScript[];
   dependencySources: DependencySource[];
   environmentVariables: string[];
-  networkEndpoints: string[];
+  networkEndpoints: NetworkEndpoint[];
   commandExecutions: Array<{ filePath: string; line: number; snippet: string }>;
   filesystemReads: Array<{ filePath: string; line: number; snippet: string }>;
   githubWorkflowFiles: string[];
@@ -55,8 +62,8 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
 
     collectRegex(content, /process\.env\.([A-Z0-9_]+)/g, (match) => inventory.environmentVariables.push(match[1]));
     collectRegex(content, /process\.env\[['"]([A-Z0-9_]+)['"]\]/g, (match) => inventory.environmentVariables.push(match[1]));
-    collectRegex(content, /https?:\/\/[^\s"'`)]+/g, (match) => inventory.networkEndpoints.push(match[0]));
-    collectLineMatches(content, filePath, /(child_process|exec\(|spawn\(|execFile\(|curl\s+.*\|\s*bash)/, inventory.commandExecutions);
+    collectNetworkEndpoints(content, filePath, inventory.networkEndpoints);
+    collectLineMatches(content, filePath, /(\b(?:exec|spawn|execFile)\s*\(|curl\s+.*\|\s*bash)/, inventory.commandExecutions);
     collectLineMatches(content, filePath, /(readFileSync|readFile\(|createReadStream)/, inventory.filesystemReads);
     collectLineMatches(content, filePath, /(LaunchAgent|systemd|crontab|Startup|RunOnce|pm2|daemon)/i, inventory.persistenceIndicators);
 
@@ -66,7 +73,7 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
   }
 
   inventory.environmentVariables = unique(inventory.environmentVariables);
-  inventory.networkEndpoints = unique(inventory.networkEndpoints);
+  inventory.networkEndpoints = uniqueNetworkEndpoints(inventory.networkEndpoints);
   inventory.dependencySources = uniqueDependencySources(inventory.dependencySources);
 
   return inventory;
@@ -124,6 +131,19 @@ function collectRegex(content: string, regex: RegExp, onMatch: (match: RegExpExe
   }
 }
 
+function collectNetworkEndpoints(content: string, filePath: string, output: NetworkEndpoint[]): void {
+  content.split(/\r?\n/).forEach((lineText, index) => {
+    for (const endpoint of lineText.matchAll(/https?:\/\/[^\s"'`)]+/g)) {
+      output.push({
+        endpoint: endpoint[0],
+        filePath,
+        line: index + 1,
+        snippet: lineText.trim()
+      });
+    }
+  });
+}
+
 function collectLineMatches(
   content: string,
   filePath: string,
@@ -139,6 +159,20 @@ function collectLineMatches(
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values)).sort();
+}
+
+function uniqueNetworkEndpoints(values: NetworkEndpoint[]): NetworkEndpoint[] {
+  return Array.from(
+    new Map(values.map((value) => [`${value.filePath}\0${value.line}\0${value.endpoint}\0${value.snippet}`, value])).values()
+  ).sort((a, b) => {
+    const filePathOrder = a.filePath.localeCompare(b.filePath);
+    if (filePathOrder !== 0) {
+      return filePathOrder;
+    }
+
+    const lineOrder = a.line - b.line;
+    return lineOrder === 0 ? a.endpoint.localeCompare(b.endpoint) : lineOrder;
+  });
 }
 
 function uniqueDependencySources(values: DependencySource[]): DependencySource[] {

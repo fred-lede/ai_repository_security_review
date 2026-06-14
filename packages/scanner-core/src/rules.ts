@@ -55,16 +55,20 @@ export function runRules(inventory: ProjectInventory): Finding[] {
     const hasSensitiveSource = inventory.environmentVariables.length > 0 || inventory.filesystemReads.length > 0;
     findings.push(
       finding({
-        category: hasSensitiveSource ? "data-exfiltration" : "network",
-        riskLevel: hasSensitiveSource ? "High" : "Info",
-        filePath: "inventory",
-        snippet: endpoint,
+        category: "network",
+        riskLevel: hasSensitiveSource ? "High" : "Medium",
+        filePath: endpoint.filePath,
+        lineStart: endpoint.line,
+        lineEnd: endpoint.line,
+        snippet: endpoint.snippet,
         explanation: hasSensitiveSource
-          ? "The project contains outbound network communication and sensitive local sources. Review whether sensitive data can flow to this destination."
+          ? "The project contains outbound network communication and sensitive local sources, making this an exfiltration candidate. Review whether sensitive data can flow to this destination."
           : "The project communicates with an external endpoint. Confirm this behavior is expected.",
         fix: "Document expected endpoints, minimize payloads, and require explicit consent before sending sensitive data.",
-        tags: ["network-endpoint"],
-        sink: endpoint
+        tags: hasSensitiveSource
+          ? ["network-endpoint", "exfiltration-candidate", "sensitive-source-present"]
+          : ["network-endpoint"],
+        sink: endpoint.endpoint
       })
     );
   }
