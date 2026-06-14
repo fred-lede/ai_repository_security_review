@@ -8,10 +8,15 @@ export interface PackageScript {
   filePath: string;
 }
 
+export interface DependencySource {
+  source: string;
+  filePath: string;
+}
+
 export interface ProjectInventory {
   files: string[];
   packageScripts: PackageScript[];
-  dependencySources: string[];
+  dependencySources: DependencySource[];
   environmentVariables: string[];
   networkEndpoints: string[];
   commandExecutions: Array<{ filePath: string; line: number; snippet: string }>;
@@ -61,7 +66,7 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
 
   inventory.environmentVariables = unique(inventory.environmentVariables);
   inventory.networkEndpoints = unique(inventory.networkEndpoints);
-  inventory.dependencySources = unique(inventory.dependencySources);
+  inventory.dependencySources = uniqueDependencySources(inventory.dependencySources);
 
   return inventory;
 }
@@ -99,7 +104,7 @@ function collectPackageJson(content: string, filePath: string, inventory: Projec
       }
 
       if (source.startsWith("github:") || source.startsWith("git+") || source.startsWith("http") || source.startsWith("file:")) {
-        inventory.dependencySources.push(source);
+        inventory.dependencySources.push({ source, filePath });
       }
     }
   }
@@ -126,6 +131,13 @@ function collectLineMatches(
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values)).sort();
+}
+
+function uniqueDependencySources(values: DependencySource[]): DependencySource[] {
+  return Array.from(new Map(values.map((value) => [`${value.filePath}\0${value.source}`, value])).values()).sort((a, b) => {
+    const filePathOrder = a.filePath.localeCompare(b.filePath);
+    return filePathOrder === 0 ? a.source.localeCompare(b.source) : filePathOrder;
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

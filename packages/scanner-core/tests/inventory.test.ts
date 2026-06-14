@@ -14,7 +14,10 @@ describe("buildInventory", () => {
       command: "node src/index.ts",
       filePath: "package.json"
     });
-    expect(inventory.dependencySources).toContain("github:some-user/suspicious-repo");
+    expect(inventory.dependencySources).toContainEqual({
+      source: "github:some-user/suspicious-repo",
+      filePath: "package.json"
+    });
     expect(inventory.environmentVariables).toContain("TELEGRAM_BOT_TOKEN");
     expect(inventory.networkEndpoints).toContain("https://evil.example/collect");
     expect(inventory.commandExecutions.length).toBeGreaterThan(0);
@@ -54,11 +57,18 @@ describe("buildInventory", () => {
     expect(inventory.packageScripts).toEqual([
       { name: "prepare", command: "node prepare.js", filePath: "package.json" }
     ]);
-    expect(inventory.dependencySources).toEqual(["github:some-user/suspicious-repo"]);
+    expect(inventory.dependencySources).toEqual([
+      { source: "github:some-user/suspicious-repo", filePath: "package.json" }
+    ]);
   });
 
   it("collects nested package manifests with their file paths", async () => {
     const fixture = await createProject({
+      "package.json": JSON.stringify({
+        dependencies: {
+          root: "github:child/suspicious-repo"
+        }
+      }),
       "packages/child/package.json": JSON.stringify({
         scripts: {
           postinstall: "node child.js"
@@ -76,7 +86,10 @@ describe("buildInventory", () => {
       command: "node child.js",
       filePath: "packages/child/package.json"
     });
-    expect(inventory.dependencySources).toContain("github:child/suspicious-repo");
+    expect(inventory.dependencySources).toEqual([
+      { source: "github:child/suspicious-repo", filePath: "package.json" },
+      { source: "github:child/suspicious-repo", filePath: "packages/child/package.json" }
+    ]);
   });
 
   it("includes Dockerfiles and detects command execution in them", async () => {
