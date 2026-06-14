@@ -45,6 +45,9 @@ describe("core types", () => {
   it("exports canonical category and output format vocabularies", () => {
     const category = "data-exfiltration" satisfies FindingCategory;
     const outputFormat = "sarif" satisfies OutputFormat;
+    // @ts-expect-error invalid finding categories must be rejected
+    const invalidCategory: FindingCategory = "crypto-mining";
+    void invalidCategory;
 
     expectTypeOf<Finding["category"]>().toEqualTypeOf<FindingCategory>();
     expectTypeOf<ScanOptions["outputFormats"]>().toEqualTypeOf<OutputFormat[]>();
