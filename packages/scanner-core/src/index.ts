@@ -1,4 +1,6 @@
 export const scannerCoreVersion = "0.1.0";
+export { assertSafeArchiveEntry, isSupportedArchive } from "./safeArchive.js";
+export { resolveTarget } from "./targetResolver.js";
 export type {
   AuditReport,
   Confidence,
