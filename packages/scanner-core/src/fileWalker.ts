@@ -11,6 +11,7 @@ export async function listScannableFiles(rootDir: string): Promise<string[]> {
     {
       cwd: rootDir,
       dot: true,
+      followSymbolicLinks: false,
       onlyFiles: true,
       ignore: ["node_modules/**", "dist/**", ".git/**", "coverage/**"]
     }

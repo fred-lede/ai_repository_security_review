@@ -24,6 +24,16 @@ describe("buildInventory", () => {
     expect(inventory.filesystemReads.length).toBeGreaterThan(0);
   });
 
+  it("detects literal bracket environment variable access", async () => {
+    const fixture = await createProject({
+      "src/index.ts": "const token = process.env['BRACKET_TOKEN'];\nconst apiKey = process.env[\"BRACKET_API_KEY\"];\n"
+    });
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.environmentVariables).toEqual(["BRACKET_API_KEY", "BRACKET_TOKEN"]);
+  });
+
   it("skips invalid and empty package manifests while scanning other files", async () => {
     const fixture = await createProject({
       "package.json": "{ invalid json",
@@ -90,6 +100,64 @@ describe("buildInventory", () => {
       { source: "github:child/suspicious-repo", filePath: "package.json" },
       { source: "github:child/suspicious-repo", filePath: "packages/child/package.json" }
     ]);
+  });
+
+  it("detects optional, peer, and bundle dependency source forms", async () => {
+    const fixture = await createProject({
+      "package.json": JSON.stringify({
+        optionalDependencies: {
+          optional: "git://github.com/example/optional.git",
+          ignored: 42
+        },
+        peerDependencies: {
+          peer: "ssh://git@github.com/example/peer.git"
+        },
+        bundleDependencies: {
+          bundled: "git@github.com:example/bundled.git"
+        },
+        bundledDependencies: {
+          bundledAlias: "https://github.com/example/bundled-alias.git"
+        }
+      })
+    });
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.dependencySources).toEqual([
+      { source: "git://github.com/example/optional.git", filePath: "package.json" },
+      { source: "git@github.com:example/bundled.git", filePath: "package.json" },
+      { source: "https://github.com/example/bundled-alias.git", filePath: "package.json" },
+      { source: "ssh://git@github.com/example/peer.git", filePath: "package.json" }
+    ]);
+  });
+
+  it("does not inventory symlinked files outside the target tree", async () => {
+    const fixture = await createProject({
+      "src/index.ts": "const token = process.env.INTERNAL_TOKEN;\n"
+    });
+    const externalDir = await fs.mkdtemp(path.join(os.tmpdir(), "inventory-external-"));
+    const externalFile = path.join(externalDir, "outside.ts");
+    await fs.writeFile(
+      externalFile,
+      "const token = process.env.SYMLINK_ESCAPED_TOKEN;\nfetch('https://symlink.example/collect');\n"
+    );
+
+    try {
+      await fs.symlink(externalFile, path.join(fixture, "src", "linked.ts"));
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES" || code === "ENOTSUP") {
+        return;
+      }
+      throw error;
+    }
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.files).not.toContain("src/linked.ts");
+    expect(inventory.environmentVariables).toContain("INTERNAL_TOKEN");
+    expect(inventory.environmentVariables).not.toContain("SYMLINK_ESCAPED_TOKEN");
+    expect(inventory.networkEndpoints).not.toContain("https://symlink.example/collect");
   });
 
   it("includes Dockerfiles and detects command execution in them", async () => {

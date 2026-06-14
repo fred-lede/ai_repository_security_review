@@ -54,6 +54,7 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
     }
 
     collectRegex(content, /process\.env\.([A-Z0-9_]+)/g, (match) => inventory.environmentVariables.push(match[1]));
+    collectRegex(content, /process\.env\[['"]([A-Z0-9_]+)['"]\]/g, (match) => inventory.environmentVariables.push(match[1]));
     collectRegex(content, /https?:\/\/[^\s"'`)]+/g, (match) => inventory.networkEndpoints.push(match[0]));
     collectLineMatches(content, filePath, /(child_process|exec\(|spawn\(|execFile\(|curl\s+.*\|\s*bash)/, inventory.commandExecutions);
     collectLineMatches(content, filePath, /(readFileSync|readFile\(|createReadStream)/, inventory.filesystemReads);
@@ -93,7 +94,14 @@ function collectPackageJson(content: string, filePath: string, inventory: Projec
     }
   }
 
-  for (const deps of [parsed.dependencies, parsed.devDependencies]) {
+  for (const deps of [
+    parsed.dependencies,
+    parsed.devDependencies,
+    parsed.optionalDependencies,
+    parsed.peerDependencies,
+    parsed.bundledDependencies,
+    parsed.bundleDependencies
+  ]) {
     if (!isRecord(deps)) {
       continue;
     }
@@ -103,7 +111,7 @@ function collectPackageJson(content: string, filePath: string, inventory: Projec
         continue;
       }
 
-      if (source.startsWith("github:") || source.startsWith("git+") || source.startsWith("http") || source.startsWith("file:")) {
+      if (isSuspiciousDependencySource(source)) {
         inventory.dependencySources.push({ source, filePath });
       }
     }
@@ -138,6 +146,19 @@ function uniqueDependencySources(values: DependencySource[]): DependencySource[]
     const filePathOrder = a.filePath.localeCompare(b.filePath);
     return filePathOrder === 0 ? a.source.localeCompare(b.source) : filePathOrder;
   });
+}
+
+function isSuspiciousDependencySource(source: string): boolean {
+  return (
+    source.startsWith("github:") ||
+    source.startsWith("git+") ||
+    source.startsWith("git://") ||
+    source.startsWith("ssh://") ||
+    source.startsWith("http://") ||
+    source.startsWith("https://") ||
+    source.startsWith("file:") ||
+    /^git@[^:]+:.+/.test(source)
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
