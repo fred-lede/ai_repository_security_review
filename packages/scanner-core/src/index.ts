@@ -5,7 +5,9 @@ export {
   assertSafeArchiveEntry,
   isSupportedArchive
 } from "./safeArchive.js";
+export { buildInventory } from "./inventory.js";
 export { resolveTarget } from "./targetResolver.js";
+export type { PackageScript, ProjectInventory } from "./inventory.js";
 export type { ArchiveEntryType } from "./safeArchive.js";
 export type {
   AuditReport,
