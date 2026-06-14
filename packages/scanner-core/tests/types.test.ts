@@ -48,6 +48,9 @@ describe("core types", () => {
     // @ts-expect-error invalid finding categories must be rejected
     const invalidCategory: FindingCategory = "crypto-mining";
     void invalidCategory;
+    // @ts-expect-error invalid output formats must be rejected
+    const invalidOutputFormat: OutputFormat = "html";
+    void invalidOutputFormat;
 
     expectTypeOf<Finding["category"]>().toEqualTypeOf<FindingCategory>();
     expectTypeOf<ScanOptions["outputFormats"]>().toEqualTypeOf<OutputFormat[]>();
