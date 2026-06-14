@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import type { Finding, RiskAssessment } from "../src/index.js";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type {
+  Finding,
+  FindingCategory,
+  OutputFormat,
+  RiskAssessment,
+  ScanOptions
+} from "../src/index.js";
 
 describe("core types", () => {
   it("supports blocking security findings", () => {
@@ -34,5 +40,19 @@ describe("core types", () => {
     };
 
     expect(risk.decision).toBe("Block");
+  });
+
+  it("exports canonical category and output format vocabularies", () => {
+    const category = "data-exfiltration" satisfies FindingCategory;
+    const outputFormat = "sarif" satisfies OutputFormat;
+
+    expectTypeOf<Finding["category"]>().toEqualTypeOf<FindingCategory>();
+    expectTypeOf<ScanOptions["outputFormats"]>().toEqualTypeOf<OutputFormat[]>();
+    expectTypeOf<RiskAssessment["categoryCounts"]>().toEqualTypeOf<
+      Partial<Record<FindingCategory, number>>
+    >();
+
+    expect(category).toBe("data-exfiltration");
+    expect(outputFormat).toBe("sarif");
   });
 });

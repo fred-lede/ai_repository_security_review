@@ -12,11 +12,28 @@ export type NetworkPolicy = "online" | "no-network" | "offline";
 export type RiskLevel = "Critical" | "High" | "Medium" | "Low" | "Info";
 export type Confidence = "High" | "Medium" | "Low";
 export type Decision = "Block" | "Needs Review" | "Monitor" | "Pass";
+export type OutputFormat = "markdown" | "json" | "sarif" | "mermaid";
+export type FindingCategory =
+  | "data-exfiltration"
+  | "credential-leakage"
+  | "hidden-telemetry"
+  | "tracking"
+  | "remote-code-execution"
+  | "command-injection"
+  | "supply-chain"
+  | "postinstall-script"
+  | "github-actions"
+  | "electron-ipc"
+  | "persistence"
+  | "network"
+  | "filesystem"
+  | "environment"
+  | "database";
 
 export interface ScanOptions {
   reviewMode: ReviewMode;
   networkPolicy: NetworkPolicy;
-  outputFormats: Array<"markdown" | "json" | "sarif" | "mermaid">;
+  outputFormats: OutputFormat[];
 }
 
 export interface ResolvedTarget {
@@ -31,22 +48,7 @@ export interface ResolvedTarget {
 export interface Finding {
   id: string;
   riskLevel: RiskLevel;
-  category:
-    | "data-exfiltration"
-    | "credential-leakage"
-    | "hidden-telemetry"
-    | "tracking"
-    | "remote-code-execution"
-    | "command-injection"
-    | "supply-chain"
-    | "postinstall-script"
-    | "github-actions"
-    | "electron-ipc"
-    | "persistence"
-    | "network"
-    | "filesystem"
-    | "environment"
-    | "database";
+  category: FindingCategory;
   filePath: string;
   lineStart: number;
   lineEnd: number;
@@ -95,7 +97,7 @@ export interface RiskAssessment {
   rationale: string;
   topRisks: string[];
   severityCounts: Record<RiskLevel, number>;
-  categoryCounts: Record<string, number>;
+  categoryCounts: Partial<Record<FindingCategory, number>>;
   blockingFindingIds: string[];
   residualRisk: string;
   scanLimitations: string[];
