@@ -5,17 +5,13 @@ import { isSupportedArchive } from "./safeArchive.js";
 import type { ResolvedTarget, ScanOptions } from "./types.js";
 
 const GITHUB_RE = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+(?:\.git)?$/;
-const HTTP_ARCHIVE_RE = /^https:\/\/.+\.(?:zip|tgz|tar\.gz)$/;
+const HTTP_ARCHIVE_RE = /^https?:\/\/.+\.(?:zip|tgz|tar\.gz)$/;
 const NPM_TARBALL_RE = /^https:\/\/registry\.npmjs\.org\/.+\.tgz$/;
 const NPM_SPEC_RE = /^(?:@[^/\s]+\/)?[^@\s/]+(?:@[\w.-]+)?$/;
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export async function resolveTarget(input: string, options: ScanOptions): Promise<ResolvedTarget> {
-  if (isRemoteTarget(input) && options.networkPolicy !== "online") {
-    throw new Error("Network access is disabled for this target");
-  }
-
   const localTarget = await resolveLocalTarget(input);
 
   if (localTarget?.stat.isDirectory()) {
@@ -40,6 +36,10 @@ export async function resolveTarget(input: string, options: ScanOptions): Promis
       networkUsed: false,
       trustBoundary: archive ? "archive" : "local"
     };
+  }
+
+  if (isRemoteTarget(input) && options.networkPolicy !== "online") {
+    throw new Error("Network access is disabled for this target");
   }
 
   if (GITHUB_RE.test(input)) {
@@ -73,7 +73,7 @@ function remote(type: ResolvedTarget["type"], source: string): ResolvedTarget {
 }
 
 function isRemoteTarget(input: string): boolean {
-  return input.startsWith("https://") || NPM_SPEC_RE.test(input);
+  return input.startsWith("http://") || input.startsWith("https://") || NPM_SPEC_RE.test(input);
 }
 
 async function resolveLocalTarget(
