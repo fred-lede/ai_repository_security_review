@@ -37,6 +37,7 @@ async function createWindow(): Promise<void> {
     minWidth: 1080,
     minHeight: 720,
     title: "Repository Security Auditor",
+    icon: path.join(app.getAppPath(), "assets/icon.png"),
     webPreferences: {
       preload: path.join(app.getAppPath(), "build/preload.cjs"),
       contextIsolation: true,

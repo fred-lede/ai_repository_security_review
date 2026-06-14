@@ -33,17 +33,21 @@
     "files": [
       "build/**",
       "src/renderer/index.html",
-      "src/preload.cjs"
+      "src/preload.cjs",
+      "assets/**"
     ],
     "mac": {
       "target": "dmg",
+      "icon": "assets/icon.png",
       "identity": null
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/icon.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "assets/icon.png"
     }
   }
 }
