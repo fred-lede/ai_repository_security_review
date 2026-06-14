@@ -1,0 +1,17 @@
+{
+  "name": "@repo-auditor/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "repo-auditor": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run tests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@repo-auditor/scanner-core": "0.1.0",
+    "commander": "^12.1.0"
+  }
+}

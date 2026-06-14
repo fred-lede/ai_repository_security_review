@@ -33,8 +33,10 @@ export interface ProjectInventory {
   persistenceIndicators: Array<{ filePath: string; line: number; snippet: string }>;
 }
 
-export async function buildInventory(rootDir: string): Promise<ProjectInventory> {
-  const files = await listScannableFiles(rootDir);
+export async function buildInventory(targetPath: string): Promise<ProjectInventory> {
+  const stat = await fs.stat(targetPath);
+  const rootDir = stat.isFile() ? path.dirname(targetPath) : targetPath;
+  const files = stat.isFile() ? [path.basename(targetPath)] : await listScannableFiles(rootDir);
   const inventory: ProjectInventory = {
     files,
     packageScripts: [],
@@ -64,7 +66,12 @@ export async function buildInventory(rootDir: string): Promise<ProjectInventory>
     collectRegex(content, /process\.env\[['"]([A-Z0-9_]+)['"]\]/g, (match) => inventory.environmentVariables.push(match[1]));
     collectNetworkEndpoints(content, filePath, inventory.networkEndpoints);
     collectLineMatches(content, filePath, /(\b(?:exec|spawn|execFile)\s*\(|curl\s+.*\|\s*bash)/, inventory.commandExecutions);
-    collectLineMatches(content, filePath, /(readFileSync|readFile\(|createReadStream)/, inventory.filesystemReads);
+    collectLineMatches(
+      content,
+      filePath,
+      /(?:\bfs\.)?(?:readFileSync|readFile|createReadStream)\s*\(/,
+      inventory.filesystemReads
+    );
     collectLineMatches(content, filePath, /(LaunchAgent|systemd|crontab|Startup|RunOnce|pm2|daemon)/i, inventory.persistenceIndicators);
 
     if (/ipcMain\.(handle|on)|contextBridge|nodeIntegration|contextIsolation/.test(content)) {

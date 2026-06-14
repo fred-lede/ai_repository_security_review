@@ -17,6 +17,8 @@ export {
 } from "./reporters.js";
 export { assessRisk } from "./risk.js";
 export { runRules } from "./rules.js";
+export { scanTarget } from "./scan.js";
+export type { ScanOutputName, ScanResult } from "./scan.js";
 export { resolveTarget } from "./targetResolver.js";
 export type { DependencySource, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
 export type { ArchiveEntryType } from "./safeArchive.js";
