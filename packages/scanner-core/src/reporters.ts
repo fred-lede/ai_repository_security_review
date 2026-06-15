@@ -23,6 +23,18 @@ export function renderMarkdownReport(report: AuditReport, lang: Language = "zh-T
     `## ${t.t("report.findings")}`,
     "",
     ...report.findings.flatMap((finding) => renderFinding(finding, t)),
+    "",
+    `## ${t.t("riskMatrix")}`,
+    "",
+    renderRiskMatrixText(buildRiskMatrix(report), t),
+    "",
+    `## ${t.t("attackSurface")}`,
+    "",
+    ...buildAttackSurface(report).flatMap(entry => [
+      `- **${t.category(entry.category as FindingCategory)}** (${entry.count})`,
+      ...entry.highlights.map(fp => `  - \`${fp}\``)
+    ]),
+    "",
     `## ${t.t("report.dataFlow")}`,
     "",
     "```mermaid",
@@ -308,6 +320,16 @@ export function buildRiskMatrix(report: AuditReport): RiskMatrixRow[] {
   rows.push(total);
 
   return rows;
+}
+
+export function renderRiskMatrixText(matrix: RiskMatrixRow[], t: ReturnType<typeof createTranslator>): string {
+  const header = `| ${t.t("report.category")} | ${t.riskLevel("Critical")} | ${t.riskLevel("High")} | ${t.riskLevel("Medium")} | ${t.riskLevel("Low")} | ${t.riskLevel("Info")} | ${t.t("total")} |`;
+  const separator = "|---|---|---|---|---|---|---|";
+  const rows = matrix.map(row => {
+    const catName = row.category === "Total" ? `**${t.t("total")}**` : t.category(row.category as FindingCategory);
+    return `| ${catName} | ${row.critical} | ${row.high} | ${row.medium} | ${row.low} | ${row.info} | **${row.total}** |`;
+  });
+  return [header, separator, ...rows].join("\n");
 }
 
 export function buildAttackSurface(report: AuditReport): AttackSurfaceEntry[] {
