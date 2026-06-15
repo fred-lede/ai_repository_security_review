@@ -7,6 +7,7 @@ import { scanTarget, type OutputFormat } from "@repo-auditor/scanner-core";
 
 const outputFiles: Record<OutputFormat | "decision" | "remediation", string> = {
   html: "report.html",
+  pdf: "report.pdf",
   markdown: "report.md",
   json: "findings.json",
   mermaid: "data-flow.mmd",
@@ -51,6 +52,12 @@ export function createProgram(io: CliIo = defaultIo): Command {
         outputFormats
       });
 
+      if (result.outputs.pdf && outputFormats.includes("pdf")) {
+        io.writeOut("Warning: PDF format requires Electron desktop app; outputting HTML as report.html instead.\n");
+        result.outputs.html = result.outputs.pdf;
+        delete result.outputs.pdf;
+      }
+
       await fs.mkdir(flags.output, { recursive: true });
 
       for (const [name, content] of Object.entries(result.outputs)) {
@@ -79,7 +86,7 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
 
 function parseOutputFormats(value: string): OutputFormat[] {
   const formats = value.split(",").map((format) => format.trim()).filter(Boolean);
-  const allowed = new Set<OutputFormat>(["markdown", "json", "mermaid", "sarif"]);
+  const allowed = new Set<OutputFormat>(["markdown", "json", "mermaid", "sarif", "html", "pdf"]);
   const invalid = formats.filter((format) => !allowed.has(format as OutputFormat));
 
   if (invalid.length > 0) {

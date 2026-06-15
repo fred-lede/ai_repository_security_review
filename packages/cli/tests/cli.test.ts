@@ -54,4 +54,33 @@ describe("repo-auditor cli", () => {
       })
     ).rejects.toThrow("Unsupported output format: xml");
   });
+
+  it("degrades --format pdf to HTML with a warning", async () => {
+    const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "repo-auditor-cli-pdf-"));
+    const output: string[] = [];
+    const exitCodes: number[] = [];
+    const program = createProgram({
+      writeOut: (value) => output.push(value),
+      setExitCode: (code) => exitCodes.push(code)
+    });
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "node",
+        "repo-auditor",
+        "scan",
+        path.resolve("fixtures/malicious-package"),
+        "--offline",
+        "--format",
+        "pdf",
+        "--output",
+        outputDir
+      ],
+      { from: "node" }
+    );
+
+    expect(output.join("")).toContain("PDF format requires Electron");
+    await expect(fs.stat(path.join(outputDir, "report.html"))).resolves.toBeDefined();
+  });
 });
