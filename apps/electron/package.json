@@ -2,7 +2,7 @@
   "name": "@repo-auditor/electron",
   "version": "0.1.0",
   "description": "Desktop shell for Repository Security Auditor",
-  "author": "Repository Security Auditor",
+  "author": "Fred Wang",
   "type": "module",
   "main": "build/main.js",
   "scripts": {

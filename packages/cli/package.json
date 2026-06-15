@@ -1,6 +1,7 @@
 {
   "name": "@repo-auditor/cli",
   "version": "0.1.0",
+  "author": "Fred Wang",
   "type": "module",
   "bin": {
     "repo-auditor": "dist/index.js"
