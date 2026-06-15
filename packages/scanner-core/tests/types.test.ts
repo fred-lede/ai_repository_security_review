@@ -47,11 +47,12 @@ describe("core types", () => {
   it("exports canonical category and output format vocabularies", () => {
     const category = "data-exfiltration" satisfies FindingCategory;
     const outputFormat = "sarif" satisfies OutputFormat;
+    const pdfFormat = "pdf" satisfies OutputFormat;
     // @ts-expect-error invalid finding categories must be rejected
     const invalidCategory: FindingCategory = "crypto-mining";
     void invalidCategory;
     // @ts-expect-error invalid output formats must be rejected
-    const invalidOutputFormat: OutputFormat = "pdf";
+    const invalidOutputFormat: OutputFormat = "docx";
     void invalidOutputFormat;
 
     expectTypeOf<Finding["category"]>().toEqualTypeOf<FindingCategory>();
@@ -63,6 +64,9 @@ describe("core types", () => {
 
     expect(category).toBe("data-exfiltration");
     expect(outputFormat).toBe("sarif");
+    expect(pdfFormat).toBe("pdf");
+    const validFormats: OutputFormat[] = ["markdown", "json", "sarif", "mermaid", "html", "pdf"];
+    expect(validFormats).toContain("pdf");
   });
 
   it("exports SARIF and remediation renderers from the public entrypoint", () => {
