@@ -83,7 +83,10 @@ ipcMain.handle("report:read", async (_event, payload: { filePath: string }) => {
 
 ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   assertAllowed("report:export");
-  await fs.mkdir(payload.outputDir, { recursive: true });
+  const outputDir = path.isAbsolute(payload.outputDir)
+    ? payload.outputDir
+    : path.join(app.getPath("documents"), payload.outputDir);
+  await fs.mkdir(outputDir, { recursive: true });
   const written: string[] = [];
   const filenames: Record<keyof ExportPayload["outputs"], string> = {
     html: "report.html",
@@ -101,7 +104,7 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
       continue;
     }
 
-    const destination = path.join(payload.outputDir, filenames[name as keyof typeof filenames]);
+    const destination = path.join(outputDir, filenames[name as keyof typeof filenames]);
     await fs.writeFile(destination, content);
     written.push(destination);
   }
@@ -120,7 +123,7 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
           pageSize: "A4",
           printBackground: true
         });
-        const pdfDest = path.join(payload.outputDir, "report.pdf");
+        const pdfDest = path.join(outputDir, "report.pdf");
         await fs.writeFile(pdfDest, pdfBuffer);
         written.push(pdfDest);
       } finally {
@@ -133,13 +136,13 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   }
 
   if (payload.aiReview) {
-    const jsonDest = path.join(payload.outputDir, "ai-review.json");
+    const jsonDest = path.join(outputDir, "ai-review.json");
     await fs.writeFile(jsonDest, JSON.stringify(payload.aiReview, null, 2));
     written.push(jsonDest);
 
     const summary = payload.aiReview.summary;
     if (typeof summary === "string") {
-      const mdDest = path.join(payload.outputDir, "ai-review.md");
+      const mdDest = path.join(outputDir, "ai-review.md");
       await fs.writeFile(mdDest, summary);
       written.push(mdDest);
     }
