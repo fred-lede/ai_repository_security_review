@@ -32,7 +32,7 @@ describe("Electron IPC allowlist", () => {
 describe("renderer shell options", () => {
   it("includes all expected input, output, and AI provider modes", () => {
     expect(inputModes).toEqual(["Local Directory", "File", "GitHub Repository", "npm Package"]);
-    expect(outputFormats).toEqual(["markdown", "json", "mermaid", "sarif", "html"]);
+    expect(outputFormats).toEqual(["markdown", "json", "mermaid", "sarif", "html", "pdf"]);
     expect(aiProviderModes).toEqual(["cloud", "ollama", "custom"]);
   });
 
