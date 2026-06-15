@@ -13,8 +13,11 @@ export {
   renderMarkdownReport,
   renderMermaidDataFlow,
   renderRemediationList,
-  renderSarifReport
+  renderSarifReport,
+  buildRiskMatrix,
+  buildAttackSurface
 } from "./reporters.js";
+export type { RiskMatrixRow } from "./reporters.js";
 export { applyBuiltinRules, builtinRules, generateFinding } from "./defaultRules.js";
 export type { BuiltinRule } from "./defaultRules.js";
 export { assessRisk } from "./risk.js";
@@ -30,6 +33,7 @@ export { resolveTarget } from "./targetResolver.js";
 export type { DependencySource, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
 export type { ArchiveEntryType } from "./safeArchive.js";
 export type {
+  AttackSurfaceEntry,
   AuditReport,
   Confidence,
   DataFlowEdge,

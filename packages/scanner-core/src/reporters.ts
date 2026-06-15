@@ -1,5 +1,5 @@
 import { createTranslator, type Language } from "./i18n.js";
-import type { AuditReport, DataFlowGraph, Finding } from "./types.js";
+import type { AttackSurfaceEntry, AuditReport, DataFlowGraph, Finding } from "./types.js";
 
 export function renderMarkdownReport(report: AuditReport, lang: Language = "zh-TW"): string {
   const t = createTranslator(lang);
@@ -252,4 +252,75 @@ function sarifLevel(finding: Finding): "error" | "warning" | "note" {
 
 function escapeMermaid(value: string): string {
   return value.replace(/"/g, "'");
+}
+
+export interface RiskMatrixRow {
+  category: string;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+  total: number;
+}
+
+export function buildRiskMatrix(report: AuditReport): RiskMatrixRow[] {
+  const matrix = new Map<string, RiskMatrixRow>();
+
+  for (const finding of report.findings) {
+    const cat = finding.category;
+    let row = matrix.get(cat);
+    if (!row) {
+      row = { category: cat, critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 };
+      matrix.set(cat, row);
+    }
+    switch (finding.riskLevel) {
+      case "Critical": row.critical++; break;
+      case "High": row.high++; break;
+      case "Medium": row.medium++; break;
+      case "Low": row.low++; break;
+      case "Info": row.info++; break;
+    }
+    row.total++;
+  }
+
+  const rows = Array.from(matrix.values());
+
+  const total: RiskMatrixRow = { category: "Total", critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 };
+  for (const row of rows) {
+    total.critical += row.critical;
+    total.high += row.high;
+    total.medium += row.medium;
+    total.low += row.low;
+    total.info += row.info;
+    total.total += row.total;
+  }
+  rows.push(total);
+
+  return rows;
+}
+
+export function buildAttackSurface(report: AuditReport): AttackSurfaceEntry[] {
+  const groups = new Map<string, { count: number; highlights: string[] }>();
+
+  for (const finding of report.findings) {
+    const cat = finding.category;
+    let entry = groups.get(cat);
+    if (!entry) {
+      entry = { count: 0, highlights: [] };
+      groups.set(cat, entry);
+    }
+    entry.count++;
+    if (!entry.highlights.includes(finding.filePath) && entry.highlights.length < 5) {
+      entry.highlights.push(finding.filePath);
+    }
+  }
+
+  const entries: AttackSurfaceEntry[] = [];
+  for (const [category, data] of groups) {
+    entries.push({ category, count: data.count, highlights: data.highlights });
+  }
+
+  entries.sort((a, b) => b.count - a.count);
+  return entries;
 }
