@@ -78,5 +78,9 @@ function renderOutputs(report: AuditReport, outputFormats: OutputFormat[], lang:
     outputs.html = renderHtmlReport(report, lang);
   }
 
+  if (selectedFormats.has("pdf")) {
+    outputs.pdf = renderHtmlReport(report, lang);
+  }
+
   return outputs;
 }

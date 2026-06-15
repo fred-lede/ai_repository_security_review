@@ -37,6 +37,17 @@ describe("scan orchestration", () => {
     );
   });
 
+  it("renders pdf output as the same HTML content as html output", async () => {
+    const result = await scanTarget(path.resolve("fixtures/malicious-package"), {
+      reviewMode: "full-audit",
+      networkPolicy: "offline",
+      outputFormats: ["html", "pdf"]
+    });
+
+    expect(result.outputs.pdf).toBe(result.outputs.html);
+    expect(result.outputs.pdf).toContain("<!DOCTYPE html>");
+  });
+
   it("clones and scans remote GitHub targets", async () => {
     const result = await scanTarget("https://github.com/grinev/opencode-telegram-bot.git", {
       reviewMode: "full-audit",
