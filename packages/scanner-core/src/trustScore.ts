@@ -15,7 +15,8 @@ export function computeTrustScore(risk: RiskAssessment): TrustScore {
   raw -= (severityCounts["High"] ?? 0) * 10;
   raw -= (severityCounts["Medium"] ?? 0) * 5;
 
-  if (residualRisk.includes("static")) {
+  const isStaticLimited = /static|靜態|静态/i.test(residualRisk);
+  if (isStaticLimited) {
     raw -= 5;
   }
 
@@ -58,5 +59,7 @@ export function computeFinalVerdict(risk: RiskAssessment): string {
       return "verdictManualReview";
     case "Block":
       return "verdictBlock";
+    default:
+      return "verdictManualReview";
   }
 }
