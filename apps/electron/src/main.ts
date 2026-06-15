@@ -274,7 +274,7 @@ interface SourceReadPayload {
 
 ipcMain.handle("source:read", async (_event, payload: SourceReadPayload) => {
   assertAllowed("source:read");
-  const resolvedPath = path.join(payload.basePath, payload.filePath);
+  const resolvedPath = path.resolve(payload.basePath, payload.filePath);
   const ctx = payload.contextLines ?? 5;
   try {
     const content = await fs.readFile(resolvedPath, "utf8");

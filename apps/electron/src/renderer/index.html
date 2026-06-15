@@ -1119,7 +1119,8 @@
             ctxBtn.textContent = t("showContext");
             ctxBtn.addEventListener("click", async (e) => {
               e.stopPropagation();
-              if (!state.result?.report?.target?.localPath) {
+              const basePath = state.result?.report?.target?.localPath || $("target").value;
+              if (!basePath) {
                 const span = document.createElement("span");
                 span.className = "muted";
                 span.textContent = t("sourceNotAvailable");
@@ -1130,7 +1131,7 @@
               ctxBtn.textContent = "...";
               try {
                 const ctxResult = await window.repoAuditor.sourceRead({
-                  basePath: state.result.report.target.localPath,
+                  basePath,
                   filePath: finding.filePath,
                   lineStart: finding.lineStart,
                   lineEnd: finding.lineEnd,
