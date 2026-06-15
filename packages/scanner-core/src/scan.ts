@@ -44,7 +44,7 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
     risk,
     attackSurface: [],
     generatedAt: new Date().toISOString(),
-    toolVersion: "0.1.0"
+    toolVersion: "0.2.0"
   };
 
   report.attackSurface = buildAttackSurface(report);
