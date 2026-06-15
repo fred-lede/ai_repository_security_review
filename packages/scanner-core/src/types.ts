@@ -12,7 +12,7 @@ export type NetworkPolicy = "online" | "no-network" | "offline";
 export type RiskLevel = "Critical" | "High" | "Medium" | "Low" | "Info";
 export type Confidence = "High" | "Medium" | "Low";
 export type Decision = "Block" | "Needs Review" | "Monitor" | "Pass";
-export type OutputFormat = "markdown" | "json" | "sarif" | "mermaid";
+export type OutputFormat = "markdown" | "json" | "sarif" | "mermaid" | "html";
 export type FindingCategory =
   | "data-exfiltration"
   | "credential-leakage"
@@ -107,11 +107,18 @@ export interface RiskAssessment {
   scanLimitations: string[];
 }
 
+export interface AttackSurfaceEntry {
+  category: string;
+  count: number;
+  highlights: string[];
+}
+
 export interface AuditReport {
   target: ResolvedTarget;
   findings: Finding[];
   dataFlow: DataFlowGraph;
   risk: RiskAssessment;
+  attackSurface: AttackSurfaceEntry[];
   generatedAt: string;
   toolVersion: string;
 }

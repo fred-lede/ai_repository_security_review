@@ -36,6 +36,7 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
     findings,
     dataFlow,
     risk,
+    attackSurface: [],
     generatedAt: new Date().toISOString(),
     toolVersion: "0.1.0"
   };
