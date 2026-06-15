@@ -87,6 +87,7 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   const written: string[] = [];
   const filenames: Record<keyof ExportPayload["outputs"], string> = {
     html: "report.html",
+    pdf: "report.pdf",
     markdown: "report.md",
     json: "findings.json",
     mermaid: "data-flow.mmd",
@@ -96,13 +97,39 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   };
 
   for (const [name, content] of Object.entries(payload.outputs)) {
-    if (typeof content !== "string") {
+    if (typeof content !== "string" || name === "pdf") {
       continue;
     }
 
     const destination = path.join(payload.outputDir, filenames[name as keyof typeof filenames]);
     await fs.writeFile(destination, content);
     written.push(destination);
+  }
+
+  if (payload.outputs.pdf) {
+    try {
+      const pdfWin = new BrowserWindow({
+        width: 1200,
+        height: 900,
+        show: false,
+        webPreferences: { offscreen: true }
+      });
+      try {
+        await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.outputs.pdf)}`);
+        const pdfBuffer = await pdfWin.webContents.printToPDF({
+          pageSize: "A4",
+          printBackground: true
+        });
+        const pdfDest = path.join(payload.outputDir, "report.pdf");
+        await fs.writeFile(pdfDest, pdfBuffer);
+        written.push(pdfDest);
+      } finally {
+        pdfWin.destroy();
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "PDF export failed";
+      console.error("printToPDF error:", msg);
+    }
   }
 
   if (payload.aiReview) {
