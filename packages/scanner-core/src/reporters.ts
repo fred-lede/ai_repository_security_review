@@ -428,7 +428,7 @@ th{background:#f8f9fa;font-weight:600;white-space:nowrap}
 pre{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;overflow-x:auto;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:0.8125rem;line-height:1.5}
 .tag{display:inline-block;padding:0.1rem 0.35rem;background:#e9ecef;border-radius:3px;font-size:0.6875rem;color:#495057;margin:0.1rem;white-space:nowrap}
 footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #dee2e6;color:#6c757d;font-size:0.8125rem;text-align:center}
-@media(max-width:768px){body{padding:1rem}table{font-size:0.75rem}th,td{padding:0.25rem 0.5rem}}
+@media(max-width:768px){body{padding:1rem}table{font-size:0.75rem}th,td{padding:0.25rem 0.5rem}}@media print{body{max-width:none;width:170mm;margin:0 auto;padding:10mm 15mm}section{break-before:page}section:first-of-type{break-before:avoid}.card,.attack-entry,table{break-inside:avoid}table thead{display:table-header-group}tr{break-inside:avoid}}
 </style>
 </head>
 <body>
