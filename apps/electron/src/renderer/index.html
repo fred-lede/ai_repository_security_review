@@ -180,6 +180,27 @@
         border-left-color: #bf8700;
       }
 
+      .finding.expanded .finding-detail { display: block; }
+      .finding-detail { display: none; border-top: 1px solid #d0d7de; padding: 12px 0 4px; }
+      .finding-header { cursor: pointer; }
+      .finding-header .collapse-icon { float: right; transition: transform 0.15s; }
+      .finding.expanded .finding-header .collapse-icon { transform: rotate(90deg); }
+      .finding-code, .finding-patch, .finding-context {
+        background: #f8f9fa;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 6px 0;
+        overflow-x: auto;
+        font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+      }
+      .line-num { color: #6c757d; display: inline-block; min-width: 3ch; text-align: right; margin-right: 1em; user-select: none; }
+      .line-highlight { background: #fff3cd; }
+      .finding-fix { margin: 4px 0; }
+
       .muted {
         color: #667586;
       }
@@ -551,7 +572,12 @@
           repoPlh: "https://github.com/user/repo",
           npmPlh: "package-name or @scope/package@1.0.0",
           error: "Error",
-          running: "Running"
+          running: "Running",
+          codeSnippet: "Code Snippet",
+          recommendedFix: "Recommended Fix",
+          patchDraft: "Patch Draft",
+          showContext: "Show Context",
+          sourceNotAvailable: "Source file not available"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -592,7 +618,12 @@
           repoPlh: "https://github.com/user/repo",
           npmPlh: "package-name 或 @scope/package@1.0.0",
           error: "錯誤",
-          running: "執行中"
+          running: "執行中",
+          codeSnippet: "程式碼片段",
+          recommendedFix: "建議修復",
+          patchDraft: "修補草稿",
+          showContext: "顯示上下文",
+          sourceNotAvailable: "原始檔案無法使用"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -633,7 +664,12 @@
           repoPlh: "https://github.com/user/repo",
           npmPlh: "package-name 或 @scope/package@1.0.0",
           error: "错误",
-          running: "运行中"
+          running: "运行中",
+          codeSnippet: "代码片段",
+          recommendedFix: "建议修复",
+          patchDraft: "修补草稿",
+          showContext: "显示上下文",
+          sourceNotAvailable: "源文件无法使用"
         }
       };
 
@@ -1030,7 +1066,109 @@
             const el = document.createElement("div");
             el.className = "panel finding";
             el.dataset.risk = finding.riskLevel;
-            el.innerHTML = `<strong>${localizedRisk(finding.riskLevel)}</strong> ${localizedCategory(finding.category)}<br /><span class="muted">${finding.filePath}:${finding.lineStart}</span><p>${localizedExplanation(finding.explanation)}</p>`;
+
+            const header = document.createElement("div");
+            header.className = "finding-header";
+            const lineRange = finding.lineEnd !== finding.lineStart ? `${finding.lineStart}-${finding.lineEnd}` : String(finding.lineStart);
+            header.innerHTML = `<span class="collapse-icon">▶</span><strong>${localizedRisk(finding.riskLevel)}</strong> ${localizedCategory(finding.category)}<br /><span class="muted">${finding.filePath}:${lineRange}</span>`;
+
+            const detail = document.createElement("div");
+            detail.className = "finding-detail";
+
+            const explanationP = document.createElement("p");
+            explanationP.textContent = localizedExplanation(finding.explanation);
+            detail.appendChild(explanationP);
+
+            if (finding.codeSnippet) {
+              const h4 = document.createElement("h4");
+              h4.textContent = t("codeSnippet");
+              detail.appendChild(h4);
+              const pre = document.createElement("pre");
+              pre.className = "finding-code";
+              const code = document.createElement("code");
+              const snippetLines = finding.codeSnippet.split("\n");
+              code.textContent = finding.lineStart
+                ? snippetLines.map((line, i) => `${String(finding.lineStart + i).padStart(4)} │ ${line}`).join("\n")
+                : finding.codeSnippet;
+              pre.appendChild(code);
+              detail.appendChild(pre);
+            }
+
+            if (finding.recommendedFix) {
+              const h4 = document.createElement("h4");
+              h4.textContent = t("recommendedFix");
+              detail.appendChild(h4);
+              const p = document.createElement("p");
+              p.className = "finding-fix";
+              p.textContent = finding.recommendedFix;
+              detail.appendChild(p);
+            }
+
+            if (finding.remediation?.patchDraft) {
+              const h4 = document.createElement("h4");
+              h4.textContent = t("patchDraft");
+              detail.appendChild(h4);
+              const pre = document.createElement("pre");
+              pre.className = "finding-patch";
+              pre.textContent = finding.remediation.patchDraft;
+              detail.appendChild(pre);
+            }
+
+            const ctxBtn = document.createElement("button");
+            ctxBtn.className = "secondary";
+            ctxBtn.textContent = t("showContext");
+            ctxBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              if (!state.result?.report?.target?.localPath) {
+                const span = document.createElement("span");
+                span.className = "muted";
+                span.textContent = t("sourceNotAvailable");
+                ctxBtn.replaceWith(span);
+                return;
+              }
+              ctxBtn.disabled = true;
+              ctxBtn.textContent = "...";
+              try {
+                const ctxResult = await window.repoAuditor.sourceRead({
+                  basePath: state.result.report.target.localPath,
+                  filePath: finding.filePath,
+                  lineStart: finding.lineStart,
+                  lineEnd: finding.lineEnd,
+                  contextLines: 5
+                });
+                if (ctxResult.error) {
+                  const span = document.createElement("span");
+                  span.className = "muted";
+                  span.textContent = t("sourceNotAvailable");
+                  ctxBtn.replaceWith(span);
+                  return;
+                }
+                const pre = document.createElement("pre");
+                pre.className = "finding-context";
+                pre.textContent = ctxResult.lines.map((l) => {
+                  const prefix = String(l.num).padStart(4) + " │ ";
+                  const isHighlight = l.num >= ctxResult.highlightedStart && l.num <= ctxResult.highlightedEnd;
+                  return isHighlight ? `>>> ${prefix}${l.text}` : `    ${prefix}${l.text}`;
+                }).join("\n");
+                ctxBtn.replaceWith(pre);
+              } catch {
+                const span = document.createElement("span");
+                span.className = "muted";
+                span.textContent = t("sourceNotAvailable");
+                ctxBtn.replaceWith(span);
+              }
+            });
+            detail.appendChild(ctxBtn);
+
+            el.appendChild(header);
+            el.appendChild(detail);
+
+            header.addEventListener("click", () => {
+              const wasExpanded = el.classList.contains("expanded");
+              document.querySelectorAll(".finding.expanded").forEach((f) => f.classList.remove("expanded"));
+              if (!wasExpanded) el.classList.add("expanded");
+            });
+
             return el;
           })
         );

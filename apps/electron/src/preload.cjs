@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   rulesSave: (payload) => invoke("rules:save", payload),
   keySave: (payload) => invoke("key:save", payload),
   keyLoad: () => invoke("key:load"),
-  keyDelete: () => invoke("key:delete")
+  keyDelete: () => invoke("key:delete"),
+  sourceRead: (payload) => invoke("source:read", payload)
 });

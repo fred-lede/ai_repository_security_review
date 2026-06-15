@@ -19,7 +19,8 @@ describe("Electron IPC allowlist", () => {
       "rules:save",
       "key:save",
       "key:load",
-      "key:delete"
+      "key:delete",
+      "source:read"
     ]);
   });
 

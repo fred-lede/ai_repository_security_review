@@ -11,7 +11,8 @@ export const allowedIpcChannels = [
   "rules:save",
   "key:save",
   "key:load",
-  "key:delete"
+  "key:delete",
+  "source:read"
 ] as const;
 
 export type AllowedIpcChannel = (typeof allowedIpcChannels)[number];

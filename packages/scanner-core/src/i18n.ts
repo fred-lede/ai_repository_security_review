@@ -106,7 +106,11 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "attackSurface": "Attack Surface Summary",
     "total": "Total",
     "report.category": "Category",
-    "report.evidenceTags": "Tags"
+    "report.evidenceTags": "Tags",
+    "finding.codeSnippet": "Code Snippet",
+    "finding.recommendedFix": "Recommended Fix",
+    "finding.patchDraft": "Patch Draft",
+    "finding.showContext": "Show Context"
   },
   "zh-TW": {
     "report.title": "Repository 安全審查報告",
@@ -145,7 +149,11 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "attackSurface": "攻擊面摘要",
     "total": "總計",
     "report.category": "類別",
-    "report.evidenceTags": "標籤"
+    "report.evidenceTags": "標籤",
+    "finding.codeSnippet": "程式碼片段",
+    "finding.recommendedFix": "建議修復",
+    "finding.patchDraft": "修補草稿",
+    "finding.showContext": "顯示上下文"
   },
   "zh-CN": {
     "report.title": "仓库安全审查报告",
@@ -184,7 +192,11 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "attackSurface": "攻击面摘要",
     "total": "总计",
     "report.category": "类别",
-    "report.evidenceTags": "标签"
+    "report.evidenceTags": "标签",
+    "finding.codeSnippet": "代码片段",
+    "finding.recommendedFix": "建议修复",
+    "finding.patchDraft": "修补草稿",
+    "finding.showContext": "显示上下文"
   },
 };
 

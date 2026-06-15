@@ -264,6 +264,37 @@ ipcMain.handle("key:delete", async () => {
   return { ok: true };
 });
 
+interface SourceReadPayload {
+  basePath: string;
+  filePath: string;
+  lineStart: number;
+  lineEnd: number;
+  contextLines?: number;
+}
+
+ipcMain.handle("source:read", async (_event, payload: SourceReadPayload) => {
+  assertAllowed("source:read");
+  const resolvedPath = path.join(payload.basePath, payload.filePath);
+  const ctx = payload.contextLines ?? 5;
+  try {
+    const content = await fs.readFile(resolvedPath, "utf8");
+    const allLines = content.split("\n");
+    const start = Math.max(1, payload.lineStart - ctx);
+    const end = Math.min(allLines.length, payload.lineEnd + ctx);
+    const lines = allLines.slice(start - 1, end).map((text, i) => ({
+      num: start + i,
+      text
+    }));
+    return {
+      lines,
+      highlightedStart: payload.lineStart,
+      highlightedEnd: payload.lineEnd
+    };
+  } catch {
+    return { error: "File not found" };
+  }
+});
+
 function assertAllowed(channel: string): void {
   if (!isAllowedIpcChannel(channel)) {
     throw new Error(`Blocked IPC channel: ${channel}`);
