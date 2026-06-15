@@ -476,6 +476,7 @@
             <div id="target-label" class="muted"></div>
           </div>
           <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
+          <div id="export-status"></div>
         </div>
 
         <div class="status">
@@ -577,7 +578,10 @@
           recommendedFix: "Recommended Fix",
           patchDraft: "Patch Draft",
           showContext: "Show Context",
-          sourceNotAvailable: "Source file not available"
+          sourceNotAvailable: "Source file not available",
+          exportSuccess: "Reports exported successfully",
+          exportFailed: "Export failed",
+          noScanToExport: "Run a scan first before exporting"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -623,7 +627,10 @@
           recommendedFix: "建議修復",
           patchDraft: "修補草稿",
           showContext: "顯示上下文",
-          sourceNotAvailable: "原始檔案無法使用"
+          sourceNotAvailable: "原始檔案無法使用",
+          exportSuccess: "報告匯出成功",
+          exportFailed: "匯出失敗",
+          noScanToExport: "請先執行掃描再匯出"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -669,7 +676,10 @@
           recommendedFix: "建议修复",
           patchDraft: "修补草稿",
           showContext: "显示上下文",
-          sourceNotAvailable: "源文件无法使用"
+          sourceNotAvailable: "源文件无法使用",
+          exportSuccess: "报告导出成功",
+          exportFailed: "导出失败",
+          noScanToExport: "请先执行扫描再导出"
         }
       };
 
@@ -957,14 +967,28 @@
       });
 
       $("export").addEventListener("click", async () => {
-        if (!state.result) return;
+        const statusEl = $("export-status");
+        if (!state.result) {
+          statusEl.className = "hint error";
+          statusEl.textContent = t("noScanToExport");
+          return;
+        }
+        statusEl.className = "hint";
+        statusEl.innerHTML = `<span class="spinner"></span>${t("exportReports")}...`;
         const outputDir = "reports/electron-export";
-        const exported = await window.repoAuditor.reportExport({
-          outputDir,
-          outputs: state.result.outputs,
-          aiReview: state.aiReview ?? undefined
-        });
-        $("preview").textContent = JSON.stringify(exported, null, 2);
+        try {
+          const exported = await window.repoAuditor.reportExport({
+            outputDir,
+            outputs: state.result.outputs,
+            aiReview: state.aiReview ?? undefined
+          });
+          const files = exported.written?.join(", ") || outputDir;
+          statusEl.className = "hint success";
+          statusEl.textContent = `${t("exportSuccess")}: ${files}`;
+        } catch (error) {
+          statusEl.className = "hint error";
+          statusEl.textContent = `${t("exportFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
+        }
       });
 
       async function detectProviderModels() {
