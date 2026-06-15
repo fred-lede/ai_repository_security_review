@@ -33,6 +33,7 @@ describe("reporters", () => {
       findings,
       dataFlow,
       risk,
+      attackSurface: [],
       generatedAt: "2026-06-14T00:00:00.000Z",
       toolVersion: "0.1.0"
     };
@@ -408,6 +409,7 @@ function makeReport(findings: Finding[], dataFlow: DataFlowGraph): AuditReport {
     findings,
     dataFlow,
     risk: assessRisk(findings),
+    attackSurface: [],
     generatedAt: "2026-06-14T00:00:00.000Z",
     toolVersion: "0.1.0"
   };

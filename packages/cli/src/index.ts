@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { scanTarget, type OutputFormat } from "@repo-auditor/scanner-core";
 
 const outputFiles: Record<OutputFormat | "decision" | "remediation", string> = {
+  html: "report.html",
   markdown: "report.md",
   json: "findings.json",
   mermaid: "data-flow.mmd",

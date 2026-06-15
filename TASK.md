@@ -1,6 +1,8 @@
 # TASK.md
 
 ## Completed
+- Added i18n keys for trust score, verdict, matrix, surface to all three language blocks (en, zh-TW, zh-CN) in `packages/scanner-core/src/i18n.ts`
+- Build passes, all 59 tests pass
 - Removed stale `apps/electron/dist/` directory
 - Reordered provider defaults: Ollama first (works without API key)
 - Added `.hint.error` / `.hint.success` CSS for visible status feedback

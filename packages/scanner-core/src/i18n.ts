@@ -105,9 +105,8 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "riskMatrix": "Risk Matrix",
     "attackSurface": "Attack Surface Summary",
     "total": "Total",
-    "reportCategory": "Category",
-    "reportRecommendedFix": "Recommended Fix",
-    "reportEvidenceTags": "Tags"
+    "report.category": "Category",
+    "report.evidenceTags": "Tags"
   },
   "zh-TW": {
     "report.title": "Repository 安全審查報告",
@@ -145,9 +144,8 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "riskMatrix": "風險矩陣",
     "attackSurface": "攻擊面摘要",
     "total": "總計",
-    "reportCategory": "類別",
-    "reportRecommendedFix": "建議修復",
-    "reportEvidenceTags": "標籤"
+    "report.category": "類別",
+    "report.evidenceTags": "標籤"
   },
   "zh-CN": {
     "report.title": "仓库安全审查报告",
@@ -185,9 +183,8 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "riskMatrix": "风险矩阵",
     "attackSurface": "攻击面摘要",
     "total": "总计",
-    "reportCategory": "类别",
-    "reportRecommendedFix": "建议修复",
-    "reportEvidenceTags": "标签"
+    "report.category": "类别",
+    "report.evidenceTags": "标签"
   },
 };
 

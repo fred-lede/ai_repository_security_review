@@ -86,6 +86,7 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   await fs.mkdir(payload.outputDir, { recursive: true });
   const written: string[] = [];
   const filenames: Record<keyof ExportPayload["outputs"], string> = {
+    html: "report.html",
     markdown: "report.md",
     json: "findings.json",
     mermaid: "data-flow.mmd",

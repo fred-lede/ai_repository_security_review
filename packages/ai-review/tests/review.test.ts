@@ -38,6 +38,7 @@ const report: AuditReport = {
     }
   ],
   dataFlow: { nodes: [], edges: [] },
+  attackSurface: [],
   risk: {
     overallRiskLevel: "High",
     decision: "Block",
