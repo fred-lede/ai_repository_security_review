@@ -1,5 +1,6 @@
 import { createTranslator, type Language } from "./i18n.js";
-import type { AttackSurfaceEntry, AuditReport, DataFlowGraph, Finding } from "./types.js";
+import type { AttackSurfaceEntry, AuditReport, DataFlowGraph, Finding, FindingCategory, RiskLevel } from "./types.js";
+import { computeTrustScore, computeFinalVerdict } from "./trustScore.js";
 
 export function renderMarkdownReport(report: AuditReport, lang: Language = "zh-TW"): string {
   const t = createTranslator(lang);
@@ -254,6 +255,15 @@ function escapeMermaid(value: string): string {
   return value.replace(/"/g, "'");
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export interface RiskMatrixRow {
   category: string;
   critical: number;
@@ -323,4 +333,189 @@ export function buildAttackSurface(report: AuditReport): AttackSurfaceEntry[] {
 
   entries.sort((a, b) => b.count - a.count);
   return entries;
+}
+
+export function renderHtmlReport(report: AuditReport, lang: Language = "zh-TW"): string {
+  const t = createTranslator(lang);
+  const trustScoreData = computeTrustScore(report.risk);
+  const verdictKey = computeFinalVerdict(report.risk);
+
+  const trustScoreColor = trustScoreData.raw >= 80 ? "#198754"
+    : trustScoreData.raw >= 60 ? "#0d6efd"
+    : trustScoreData.raw >= 40 ? "#ffc107"
+    : trustScoreData.raw >= 20 ? "#fd7e14"
+    : "#dc3545";
+
+  const matrix = buildRiskMatrix(report);
+  const attackSurface = buildAttackSurface(report);
+
+  const severityOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
+  const sortedFindings = [...report.findings].sort(
+    (a, b) => (severityOrder[a.riskLevel] ?? 99) - (severityOrder[b.riskLevel] ?? 99)
+  );
+
+  const mermaid = renderMermaidDataFlow(report.dataFlow);
+
+  const riskBadgeHtml = (level: RiskLevel): string => {
+    const colors: Record<string, string> = {
+      Critical: "#dc3545",
+      High: "#fd7e14",
+      Medium: "#ffc107",
+      Low: "#0dcaf0",
+      Info: "#6c757d"
+    };
+    const bg = colors[level] ?? "#6c757d";
+    const textColor = level === "Medium" ? "#212529" : "#fff";
+    return `<span class="risk-badge" style="background:${bg};color:${textColor}">${escapeHtml(t.riskLevel(level))}</span>`;
+  };
+
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(t.t("report.title"))}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#212529;background:#fff;line-height:1.6;padding:2rem;max-width:1200px;margin:0 auto}
+h1{font-size:1.75rem;margin-bottom:0.5rem;color:#1a1a2e}
+h2{font-size:1.25rem;margin:2rem 0 0.75rem;color:#16213e;border-bottom:2px solid #e9ecef;padding-bottom:0.25rem}
+.meta{color:#6c757d;font-size:0.875rem;margin-bottom:1.5rem}
+.card{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin-bottom:1rem}
+.card p{margin:0.25rem 0}
+.score-card{text-align:center;padding:2rem;background:#f8f9fa;border-radius:12px;border:1px solid #dee2e6;margin-bottom:1rem}
+.score-value{font-size:4rem;font-weight:800;line-height:1}
+.score-badge{display:inline-block;padding:0.35rem 1.25rem;border-radius:999px;color:#fff;font-weight:700;font-size:0.875rem;margin:0.75rem 0;text-transform:uppercase;letter-spacing:0.05em}
+.verdict{font-size:1.1rem;margin-top:0.5rem}
+table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+th,td{padding:0.5rem 0.75rem;border:1px solid #dee2e6;text-align:left;font-size:0.875rem}
+th{background:#f8f9fa;font-weight:600;white-space:nowrap}
+.total-row td{font-weight:700;background:#f8f9fa;border-top:2px solid #dee2e6}
+.cell-critical{background:#dc3545;color:#fff;font-weight:700;text-align:center}
+.cell-high{background:#fd7e14;color:#fff;font-weight:700;text-align:center}
+.cell-medium{background:#ffc107;color:#212529;font-weight:700;text-align:center}
+.cell-low{background:#0dcaf0;color:#fff;font-weight:700;text-align:center}
+.cell-info{background:#6c757d;color:#fff;font-weight:700;text-align:center}
+.risk-badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;color:#fff;font-size:0.75rem;font-weight:600;white-space:nowrap}
+.attack-entry{margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:6px;border:1px solid #e9ecef}
+.attack-entry h3{font-size:1rem;margin-bottom:0.25rem}
+.attack-entry .count{color:#6c757d;font-size:0.875rem}
+.attack-entry ul{list-style:none;padding-left:1rem;margin-top:0.25rem}
+.attack-entry li{font-family:'SF Mono','Fira Code',monospace;font-size:0.8125rem;color:#495057;margin:0.125rem 0}
+.attack-entry li::before{content:"\\2022 ";color:#adb5bd}
+pre{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;overflow-x:auto;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:0.8125rem;line-height:1.5}
+.tag{display:inline-block;padding:0.1rem 0.35rem;background:#e9ecef;border-radius:3px;font-size:0.6875rem;color:#495057;margin:0.1rem;white-space:nowrap}
+footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #dee2e6;color:#6c757d;font-size:0.8125rem;text-align:center}
+@media(max-width:768px){body{padding:1rem}table{font-size:0.75rem}th,td{padding:0.25rem 0.5rem}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>${escapeHtml(t.t("report.title"))}</h1>
+<p class="meta">${escapeHtml(t.t("report.generatedAt"))}: ${escapeHtml(report.generatedAt)} | Tool Version: ${escapeHtml(report.toolVersion)}</p>
+</header>
+
+<section id="summary">
+<h2>${escapeHtml(t.t("report.summary"))}</h2>
+<div class="card">
+<p><strong>${escapeHtml(t.t("report.riskLevel"))}:</strong> ${escapeHtml(t.formatRiskLevel(report.risk.overallRiskLevel))}</p>
+<p><strong>${escapeHtml(t.t("report.decision"))}:</strong> ${escapeHtml(t.formatDecision(report.risk.decision))}</p>
+<p><strong>${escapeHtml(t.t("report.rationale"))}:</strong> ${escapeHtml(t.rationale(report.risk.rationale))}</p>
+</div>
+</section>
+
+<section id="trust-score">
+<h2>${escapeHtml(t.t("trustScore"))}</h2>
+<div class="score-card">
+<div class="score-value" style="color:${trustScoreColor}">${trustScoreData.raw}</div>
+<div class="score-badge" style="background:${trustScoreColor}">${escapeHtml(t.t(trustScoreData.label))}</div>
+<div class="verdict"><strong>${escapeHtml(t.t("finalVerdict"))}:</strong> ${escapeHtml(t.t(verdictKey))}</div>
+</div>
+</section>
+
+<section id="risk-matrix">
+<h2>${escapeHtml(t.t("riskMatrix"))}</h2>
+<table>
+<thead>
+<tr>
+<th>${escapeHtml(t.t("report.category"))}</th>
+<th>${escapeHtml(t.riskLevel("Critical"))}</th>
+<th>${escapeHtml(t.riskLevel("High"))}</th>
+<th>${escapeHtml(t.riskLevel("Medium"))}</th>
+<th>${escapeHtml(t.riskLevel("Low"))}</th>
+<th>${escapeHtml(t.riskLevel("Info"))}</th>
+<th>${escapeHtml(t.t("total"))}</th>
+</tr>
+</thead>
+<tbody>
+${matrix.map(row => {
+  const isTotal = row.category === "Total";
+  const catName = isTotal ? t.t("total") : t.category(row.category as FindingCategory);
+  return `<tr${isTotal ? ' class="total-row"' : ""}>
+<td>${escapeHtml(catName)}</td>
+<td${row.critical > 0 ? ' class="cell-critical"' : ""}>${row.critical}</td>
+<td${row.high > 0 ? ' class="cell-high"' : ""}>${row.high}</td>
+<td${row.medium > 0 ? ' class="cell-medium"' : ""}>${row.medium}</td>
+<td${row.low > 0 ? ' class="cell-low"' : ""}>${row.low}</td>
+<td${row.info > 0 ? ' class="cell-info"' : ""}>${row.info}</td>
+<td><strong>${row.total}</strong></td>
+</tr>`;
+}).join("\n")}
+</tbody>
+</table>
+</section>
+
+<section id="attack-surface">
+<h2>${escapeHtml(t.t("attackSurface"))}</h2>
+${attackSurface.map(entry => `
+<div class="attack-entry">
+<h3>${escapeHtml(t.category(entry.category as FindingCategory))}</h3>
+<p class="count">${entry.count} finding${entry.count !== 1 ? "s" : ""}</p>
+${entry.highlights.length > 0 ? `<ul>
+${entry.highlights.map(fp => `<li>${escapeHtml(fp)}</li>`).join("\n")}
+</ul>` : ""}
+</div>`).join("\n")}
+</section>
+
+<section id="findings">
+<h2>${escapeHtml(t.t("report.findings"))}</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>${escapeHtml(t.t("report.riskLevelLabel"))}</th>
+<th>${escapeHtml(t.t("report.category"))}</th>
+<th>${escapeHtml(t.t("report.filePath"))}</th>
+<th>${escapeHtml(t.t("report.explanation"))}</th>
+<th>${escapeHtml(t.t("report.recommendedFix"))}</th>
+<th>${escapeHtml(t.t("report.evidenceTags"))}</th>
+</tr>
+</thead>
+<tbody>
+${sortedFindings.map(f => `
+<tr>
+<td><code>${escapeHtml(f.id)}</code></td>
+<td>${riskBadgeHtml(f.riskLevel)}</td>
+<td>${escapeHtml(t.category(f.category))}</td>
+<td><code>${escapeHtml(f.filePath)}:${f.lineStart}</code></td>
+<td>${escapeHtml(t.explanation(f.explanation))}</td>
+<td>${escapeHtml(t.recommendedFix(f.recommendedFix))}</td>
+<td>${f.evidenceTags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</td>
+</tr>`).join("\n")}
+</tbody>
+</table>
+</section>
+
+<section id="data-flow">
+<h2>${escapeHtml(t.t("report.dataFlow"))}</h2>
+<pre>${escapeHtml(mermaid)}</pre>
+</section>
+
+<footer>
+<p>${escapeHtml(t.t("report.generatedAt"))}: ${escapeHtml(report.generatedAt)}</p>
+</footer>
+
+</body>
+</html>`;
 }
