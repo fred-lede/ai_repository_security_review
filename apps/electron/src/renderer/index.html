@@ -237,6 +237,112 @@
         display: inline;
       }
 
+      .rule-card {
+        background:#fff;
+        border:1px solid #d9dee7;
+        border-radius:6px;
+        padding:10px 12px;
+        transition:border-color 0.15s;
+      }
+      .rule-card:hover {
+        border-color:#1f6feb;
+      }
+      .rule-card-header {
+        display:flex;
+        align-items:center;
+        gap:8px;
+        cursor:pointer;
+      }
+      .rule-card-header .name {
+        font-weight:600;
+        flex:1;
+      }
+      .rule-card-header .badge {
+        display:inline-block;
+        color:#fff;
+        padding:1px 8px;
+        border-radius:3px;
+        font-size:11px;
+        font-weight:600;
+        white-space:nowrap;
+      }
+      .rule-card-header .actions {
+        display:flex;
+        gap:4px;
+        flex-shrink:0;
+      }
+      .rule-card .summary {
+        font-size:12px;
+        color:#667586;
+        margin-top:4px;
+        margin-left:28px;
+      }
+      .rule-card .edit-area {
+        margin-top:8px;
+        margin-left:28px;
+        display:none;
+      }
+      .rule-card.expanded .edit-area {
+        display:block;
+      }
+      .rule-card .edit-area textarea {
+        width:100%;
+        min-height:120px;
+        font-family:monospace;
+        font-size:12px;
+        padding:8px;
+        border:1px solid #d9dee7;
+        border-radius:4px;
+        resize:vertical;
+        box-sizing:border-box;
+      }
+      .rule-card .edit-actions {
+        display:flex;
+        gap:6px;
+        margin-top:6px;
+        justify-content:flex-end;
+      }
+      .rule-card .card-error {
+        color:#d1242f;
+        font-size:12px;
+        margin-top:4px;
+      }
+      .toggle-switch {
+        position:relative;
+        width:32px;
+        height:18px;
+        flex-shrink:0;
+        cursor:pointer;
+      }
+      .toggle-switch input {
+        opacity:0;
+        width:0;
+        height:0;
+      }
+      .toggle-slider {
+        position:absolute;
+        inset:0;
+        background:#d0d7de;
+        border-radius:9px;
+        transition:0.2s;
+      }
+      .toggle-slider::before {
+        content:"";
+        position:absolute;
+        width:14px;
+        height:14px;
+        left:2px;
+        bottom:2px;
+        background:#fff;
+        border-radius:50%;
+        transition:0.2s;
+      }
+      .toggle-switch input:checked + .toggle-slider {
+        background:#1f6feb;
+      }
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform:translateX(14px);
+      }
       @media (max-width: 980px) {
         main,
         .workspace,
@@ -371,14 +477,25 @@
     </main>
 
     <div id="rules-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:10px;padding:22px;max-width:700px;width:94%;max-height:88vh;display:flex;flex-direction:column;">
-        <h2>Custom Rules</h2>
-        <p class="muted" style="font-size:13px;">Edit rules as JSON. They are loaded on every scan. One <code>RuleDefinition</code> per array entry.</p>
-        <textarea id="rules-editor" style="flex:1;min-height:300px;font-family:monospace;font-size:13px;"></textarea>
-        <div class="row" style="margin-top:10px;justify-content:flex-end;">
-          <span id="rules-status" class="hint" style="flex:1;"></span>
-          <button id="rules-cancel" class="secondary" style="margin-right:6px;">Cancel</button>
-          <button id="rules-save">Save</button>
+      <div style="background:#fff;border-radius:10px;padding:22px;max-width:750px;width:94%;max-height:90vh;display:flex;flex-direction:column;">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h2 style="margin:0">Custom Rules</h2>
+          <button id="rules-close-modal" class="secondary" style="font-size:18px;padding:2px 10px;">&times;</button>
+        </div>
+        <p class="muted" style="font-size:13px;margin-bottom:10px;">Manage custom rules. Disabled rules are skipped during scan.</p>
+        <div class="row" style="gap:8px;margin-bottom:10px;">
+          <input id="rules-filter" type="text" placeholder="Filter rules..." style="flex:1;" />
+          <button id="rules-add">+ Add Rule</button>
+        </div>
+        <div id="rules-list" style="flex:1;overflow-y:auto;min-height:200px;max-height:50vh;display:flex;flex-direction:column;gap:6px;">
+          <div class="muted" style="text-align:center;padding:30px 0;">No custom rules yet. Click + Add Rule to create one.</div>
+        </div>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #d9dee7;">
+          <div class="row" style="gap:8px;align-items:center;">
+            <button id="rules-save-all" class="primary" style="font-size:13px;">Save All</button>
+            <span id="rules-status" class="hint" style="flex:1;"></span>
+          </div>
+          <span class="muted" id="rules-count" style="font-size:12px;"></span>
         </div>
       </div>
     </div>
@@ -918,54 +1035,205 @@
         );
       }
 
-      // --- Rules Editor ---
-      $("edit-rules").addEventListener("click", async () => {
-        const modal = $("rules-modal");
-        modal.style.display = "flex";
-        const editor = $("rules-editor");
-        $("rules-status").textContent = "Loading...";
-        try {
-          const rules = await window.repoAuditor.rulesLoad();
-          editor.value = rules.length > 0 ? JSON.stringify(rules, null, 2) : JSON.stringify([
-            {
-              id: "example-rule",
-              description: "Detects endpoints with 'telemetry' in the path",
-              category: "hidden-telemetry",
-              defaultRiskLevel: "Medium",
-              inventoryField: "networkEndpoints",
-              conditions: [{ field: "endpoint", operator: "contains", value: "telemetry" }],
-              explanation: "Found a telemetry endpoint that may send data externally.",
-              recommendedFix: "Verify the endpoint is documented and expected.",
-              tags: ["telemetry"]
-            }
-          ], null, 2);
-          $("rules-status").textContent = "";
-        } catch (e) {
-          editor.value = "[]";
-          $("rules-status").textContent = "Load failed: " + (e.message || e);
+      // === Rule Editor ===
+      let rulesData = [];
+      let rulesDirty = false;
+
+      function escapeHtml(s) {
+        return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+
+      function severityBadge(sev) {
+        const colors = { Critical:"#dc3545", High:"#fd7e14", Medium:"#ffc107", Low:"#0dcaf0", Info:"#6c757d" };
+        const textColors = { Medium:"#212529" };
+        const bg = colors[sev] || "#6c757d";
+        const tc = textColors[sev] || "#fff";
+        return `<span class="badge" style="background:${bg};color:${tc}">${sev}</span>`;
+      }
+
+      function matchSummary(rule) {
+        if (!rule.match || !rule.match.length) return "no conditions";
+        return rule.match.map(m => `${m.field}: ${m.operator} "${m.value}"`).join("; ");
+      }
+
+      function makeTemplateRule() {
+        return { name: "", severity: "Medium", match: [{ field: "file", operator: "contains", value: "" }], enabled: true };
+      }
+
+      function renderRules(rules) {
+        const container = $("rules-list");
+        const filter = ($("rules-filter").value || "").toLowerCase();
+        const filtered = filter ? rules.filter(r => (r.name||"").toLowerCase().includes(filter) || (r.description||"").toLowerCase().includes(filter)) : rules;
+        if (filtered.length === 0) {
+          container.innerHTML = `<div class="muted" style="text-align:center;padding:30px 0;">${rules.length === 0 ? "No custom rules yet. Click + Add Rule to create one." : "No rules match the filter."}</div>`;
+        } else {
+          container.innerHTML = filtered.map((rule, idx) => {
+            const realIdx = rules.indexOf(rule);
+            const enabled = rule.enabled !== false;
+            return `<div class="rule-card" data-index="${realIdx}">
+              <div class="rule-card-header" onclick="toggleCard(this.closest('.rule-card'))">
+                <label class="toggle-switch" onclick="event.stopPropagation()">
+                  <input type="checkbox" ${enabled ? "checked" : ""} onchange="toggleRule(${realIdx}, this.checked)" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="name">${escapeHtml(rule.name) || "<em>unnamed</em>"}</span>
+                ${severityBadge(rule.severity)}
+                <span class="actions">
+                  <button class="secondary" onclick="event.stopPropagation();editCard(${realIdx})" style="font-size:12px;padding:2px 8px;">Edit</button>
+                  <button class="secondary" onclick="event.stopPropagation();deleteCard(${realIdx})" style="font-size:12px;padding:2px 8px;color:#d1242f;">Delete</button>
+                </span>
+              </div>
+              <div class="summary">${escapeHtml(matchSummary(rule))}</div>
+              <div class="edit-area">
+                <textarea id="rule-textarea-${realIdx}">${escapeHtml(JSON.stringify(rule, null, 2))}</textarea>
+                <div id="rule-error-${realIdx}" class="card-error"></div>
+                <div class="edit-actions">
+                  <button class="secondary" onclick="cancelEdit(${realIdx})" style="font-size:12px;padding:2px 10px;">Cancel</button>
+                  <button onclick="saveCard(${realIdx})" style="font-size:12px;padding:2px 10px;">Save</button>
+                </div>
+              </div>
+            </div>`;
+          }).join("");
         }
-      });
+        $("rules-count").textContent = `${rules.length} rule${rules.length !== 1 ? "s" : ""}`;
+      }
 
-      $("rules-cancel").addEventListener("click", () => {
-        $("rules-modal").style.display = "none";
-      });
+      function toggleCard(el) {
+        el.classList.toggle("expanded");
+      }
 
-      $("rules-modal").addEventListener("click", (e) => {
-        if (e.target === $("rules-modal")) $("rules-modal").style.display = "none";
-      });
+      function toggleRule(idx, enabled) {
+        if (rulesData[idx]) {
+          rulesData[idx].enabled = enabled;
+          rulesDirty = true;
+          $("rules-status").textContent = "Unsaved changes";
+          $("rules-status").className = "hint";
+        }
+      }
 
-      $("rules-save").addEventListener("click", async () => {
-        const status = $("rules-status");
-        const editor = $("rules-editor");
+      function editCard(idx) {
+        const card = document.querySelector(`.rule-card[data-index="${idx}"]`);
+        if (card) {
+          card.classList.add("expanded");
+          const ta = document.getElementById(`rule-textarea-${idx}`);
+          if (ta) {
+            ta.value = JSON.stringify(rulesData[idx], null, 2);
+            ta.focus();
+          }
+        }
+      }
+
+      function cancelEdit(idx) {
+        const card = document.querySelector(`.rule-card[data-index="${idx}"]`);
+        if (card) card.classList.remove("expanded");
+        const err = document.getElementById(`rule-error-${idx}`);
+        if (err) err.textContent = "";
+      }
+
+      function saveCard(idx) {
+        const ta = document.getElementById(`rule-textarea-${idx}`);
+        const err = document.getElementById(`rule-error-${idx}`);
+        if (!ta || !err) return;
         try {
-          const rules = JSON.parse(editor.value);
-          if (!Array.isArray(rules)) throw new Error("Must be a JSON array");
-          await window.repoAuditor.rulesSave(rules);
-          status.textContent = "Saved! Loaded on next scan.";
+          const parsed = JSON.parse(ta.value);
+          if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Must be a JSON object, not array");
+          if (typeof parsed.name !== "string") throw new Error("Missing required field: name (string)");
+          if (!["Critical","High","Medium","Low","Info"].includes(parsed.severity)) throw new Error("severity must be one of: Critical, High, Medium, Low, Info");
+          if (!Array.isArray(parsed.match)) throw new Error("Missing required field: match (array)");
+          rulesData[idx] = parsed;
+          rulesDirty = true;
+          $("rules-status").textContent = "Unsaved changes";
+          $("rules-status").className = "hint";
+          renderRules(rulesData);
+        } catch (e) {
+          err.textContent = "Invalid: " + e.message;
+        }
+      }
+
+      function deleteCard(idx) {
+        if (!confirm("Delete this rule?")) return;
+        rulesData.splice(idx, 1);
+        rulesDirty = true;
+        $("rules-status").textContent = "Unsaved changes";
+        $("rules-status").className = "hint";
+        renderRules(rulesData);
+      }
+
+      async function saveAllRules() {
+        const status = $("rules-status");
+        status.textContent = "Saving...";
+        status.className = "hint";
+        try {
+          await window.repoAuditor.rulesSave(rulesData);
+          rulesDirty = false;
+          status.textContent = "Saved successfully";
           status.className = "hint success";
         } catch (e) {
-          status.textContent = "Invalid JSON: " + (e.message || e);
+          status.textContent = "Save failed: " + (e.message || e);
           status.className = "hint error";
+        }
+      }
+
+      function closeRulesEditor() {
+        if (rulesDirty && !confirm("You have unsaved changes. Discard them?")) return;
+        $("rules-modal").style.display = "none";
+        rulesDirty = false;
+      }
+
+      async function openRulesEditor() {
+        $("rules-modal").style.display = "flex";
+        $("rules-status").textContent = "Loading...";
+        $("rules-status").className = "hint";
+        try {
+          const rules = await window.repoAuditor.rulesLoad();
+          rulesData = rules.length > 0 ? JSON.parse(JSON.stringify(rules)) : [makeTemplateRule()];
+          rulesDirty = false;
+          renderRules(rulesData);
+          $("rules-status").textContent = "";
+        } catch (e) {
+          $("rules-status").textContent = "Load failed: " + (e.message || e);
+          $("rules-status").className = "hint error";
+          rulesData = [makeTemplateRule()];
+          renderRules(rulesData);
+        }
+      }
+
+      $("edit-rules").addEventListener("click", openRulesEditor);
+      $("rules-close-modal").addEventListener("click", closeRulesEditor);
+      $("rules-modal").addEventListener("click", (e) => {
+        if (e.target === $("rules-modal")) closeRulesEditor();
+      });
+      $("rules-add").addEventListener("click", () => {
+        const tpl = makeTemplateRule();
+        rulesData.push(tpl);
+        rulesDirty = true;
+        $("rules-status").textContent = "Unsaved changes";
+        $("rules-status").className = "hint";
+        renderRules(rulesData);
+        setTimeout(() => {
+          const cards = document.querySelectorAll(".rule-card");
+          const last = cards[cards.length - 1];
+          if (last) last.classList.add("expanded");
+          const ta = last?.querySelector("textarea");
+          if (ta) ta.focus();
+        }, 50);
+      });
+      $("rules-filter").addEventListener("input", () => {
+        renderRules(rulesData);
+      });
+      $("rules-save-all").addEventListener("click", saveAllRules);
+
+      document.addEventListener("keydown", (e) => {
+        if ($("rules-modal").style.display !== "flex") return;
+        if (e.key === "Escape") {
+          const expanded = document.querySelector(".rule-card.expanded");
+          if (expanded) {
+            const idx = parseInt(expanded.dataset.index);
+            cancelEdit(idx);
+            e.preventDefault();
+          } else {
+            closeRulesEditor();
+          }
         }
       });
     </script>
