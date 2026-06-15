@@ -28,6 +28,10 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
 
   const scanPath = await acquireRemoteTarget(target);
 
+  if (!target.localPath) {
+    target.localPath = scanPath;
+  }
+
   const inventory = await buildInventory(scanPath);
   const findings = runRules(inventory, options.extraRules);
   const dataFlow = buildDataFlowGraph(inventory, findings);
