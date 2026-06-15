@@ -1,7 +1,9 @@
 import { buildDataFlowGraph } from "./dataFlow.js";
 import { buildInventory } from "./inventory.js";
 import {
+  buildAttackSurface,
   renderDecisionRecord,
+  renderHtmlReport,
   renderJsonReport,
   renderMarkdownReport,
   renderMermaidDataFlow,
@@ -41,6 +43,8 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
     toolVersion: "0.1.0"
   };
 
+  report.attackSurface = buildAttackSurface(report);
+
   return {
     report,
     outputs: renderOutputs(report, options.outputFormats, lang)
@@ -68,6 +72,10 @@ function renderOutputs(report: AuditReport, outputFormats: OutputFormat[], lang:
 
   if (selectedFormats.has("sarif")) {
     outputs.sarif = renderSarifReport(report, lang);
+  }
+
+  if (selectedFormats.has("html")) {
+    outputs.html = renderHtmlReport(report, lang);
   }
 
   return outputs;
