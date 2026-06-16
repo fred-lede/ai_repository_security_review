@@ -56,13 +56,8 @@ function createMenu(): void {
       ]
     }] : []),
     {
-      label: "Help",
-      submenu: [
-        {
-          label: "About",
-          click: () => showAbout()
-        }
-      ]
+      label: "About",
+      click: () => showAbout()
     }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
