@@ -2,6 +2,8 @@
 
 A multi-layered security analysis tool that detects suspicious behavior in repositories, npm packages, and source code. Combines **deterministic static analysis** (suspicious patterns, data flow tracing) with an **optional AI review layer** for human-readable assessment.
 
+**Current version: 0.2.0**
+
 ```sh
 npm run dev:cli -- scan ./fixtures/malicious-package
 ```
@@ -11,12 +13,12 @@ npm run dev:cli -- scan ./fixtures/malicious-package
 - **Multi-target scanning** — Local directories, files, archives, GitHub repositories (cloned on-the-fly)
 - **~30 built-in detection rules** — Postinstall scripts, unpinned dependencies, command injection, network exfiltration, credential leakage, persistence mechanisms, Electron IPC risks, GitHub Actions abuse
 - **Data flow graph** — Traces sensitive sources (env vars, filesystem) through processes to external sinks
-- **Risk assessment** — Block/Needs Review/Monitor/Pass decisions with residual risk analysis
-- **4 output formats** — Markdown (readable report), JSON (full data), Mermaid (flowchart), SARIF (IDE integration)
+- **Risk assessment** — Block/Needs Review/Monitor/Pass decisions with residual risk analysis, trust score, risk matrix, and attack surface summary
+- **6 output formats** — Markdown (readable report), JSON (full data), Mermaid (flowchart), SARIF (IDE integration), HTML (styled report), PDF (A4 print via Electron)
 - **AI review** — Optional Ollama/OpenAI integration with configurable data-sharing modes and secret redaction
-- **Desktop app** — Electron GUI for point-and-click scanning with language switching and custom rules editor
+- **Desktop app** — Electron GUI for point-and-click scanning with language switching, custom rules editor, finding card code preview with source context
 - **Extensible rules** — Write custom rules as JSON; rules load from a file and merge with built-in rules at scan time
-- **i18n** — English, Traditional Chinese, Simplified Chinese
+- **i18n** — English, Traditional Chinese, Simplified Chinese (UI, reports, and AI output all respect selected language)
 - **Secure** — OS-level encrypted API key storage (macOS Keychain / Windows DPAPI / Linux libsecret), path traversal prevention in archives, safe IPC allowlist
 
 ## Quick Start
@@ -50,7 +52,7 @@ Options:
   --offline                 Reject remote acquisition
   --no-network              Reject remote acquisition
   --output <dir>            Output directory (default: "reports/latest")
-  --format <formats>        Comma-separated output formats (default: "markdown,json,mermaid")
+  --format <formats>        Comma-separated output formats (default: "markdown,json,mermaid"; supports: markdown, json, mermaid, sarif, html, pdf)
   -h, --help                Display help
 
 Exit codes:
@@ -72,6 +74,9 @@ npm run dev:cli -- scan https://github.com/owner/repo
 
 # Generate SARIF output only
 npm run dev:cli -- scan /path/to/project --format sarif
+
+# Generate HTML report
+npm run dev:cli -- scan /path/to/project --format html
 ```
 
 ## Desktop App
@@ -85,9 +90,10 @@ The Electron app provides:
 - Language selector (EN / zh-TW / zh-CN)
 - Network policy toggle (offline / online)
 - AI provider configuration (Ollama, OpenAI, custom)
-- Report preview with color-coded findings
-- One-click export to all formats
-- Built-in rules editor (Edit Rules button)
+- Report preview with color-coded findings, trust score, and risk matrix
+- Finding card expand/collapse with code snippet, recommended fix, patch draft, and on-demand source file context
+- Export to all formats including HTML and PDF (via Electron printToPDF)
+- Built-in rules editor with card-based UI, inline JSON editing, add/delete, filter/search, and unsaved changes guard
 - OS-encrypted API key storage
 
 ### Package for distribution
@@ -106,17 +112,20 @@ npm run package:all    # All three platforms
 │   └── electron/           # Desktop GUI (main + renderer)
 │       ├── src/main.ts       # Electron main process
 │       ├── src/preload.cjs   # Secure IPC bridge
-│       └── src/renderer/     # HTML/CSS/JS UI
+│       ├── src/renderer/     # HTML/CSS/JS UI
+│       ├── src/ipc.ts        # IPC allowlist
+│       └── tests/            # Vitest tests
 ├── packages/
 │   ├── scanner-core/        # Scanning engine
 │   │   ├── src/rules.ts       # Rule engine (built-in + custom)
 │   │   ├── src/inventory.ts   # Project inventory builder
 │   │   ├── src/dataFlow.ts    # Data flow graph
 │   │   ├── src/risk.ts        # Risk assessment
-│   │   ├── src/reporters.ts   # Output renders (md/json/mermaid/sarif)
+│   │   ├── src/reporters.ts   # Output renders (md/html/json/mermaid/sarif)
+│   │   ├── src/trustScore.ts  # Trust scoring engine
 │   │   ├── src/ruleTypes.ts   # Declarative rule format
 │   │   ├── src/defaultRules.ts# Built-in detection rules
-│   │   └── src/i18n.ts        # Translation tables
+│   │   └── src/i18n.ts        # Translation tables (en/zh-TW/zh-CN)
 │   ├── ai-review/           # AI-powered review layer
 │   │   └── src/review.ts      # Prompt builder + provider integration
 │   └── cli/                 # Command-line interface
@@ -124,6 +133,9 @@ npm run package:all    # All three platforms
 │   ├── malicious-package/   # Suspicious test fixture
 │   └── benign-package/      # Clean test fixture
 └── docs/
+    ├── superpowers/
+    │   ├── specs/           # Design documents
+    │   └── plans/           # Implementation plans
     └── validation/          # Real-world validation results
 ```
 
@@ -190,6 +202,8 @@ Supported condition operators: `equals`, `contains`, `matches` (regex), `in`, `n
 | JSON | `findings.json` | Machine parsing / CI integration |
 | Mermaid | `data-flow.mmd` | Data flow visualization |
 | SARIF | `results.sarif` | IDE integration (VS Code, GitHub) |
+| HTML | `report.html` | Styled browser-ready report with risk matrix and attack surface |
+| PDF | `report.pdf` | A4 print-ready report (Electron only, CLI degrades to HTML with warning) |
 | Decision | `decision-record.json` | Audit decision with rationale |
 | Remediation | `remediation-list.json` | Categorized fix suggestions |
 
@@ -229,7 +243,7 @@ Reports, decisions, risk assessments, AI prompts, and the desktop UI all respect
 # Build everything
 npm run build
 
-# Run all tests (79+ tests across 4 packages)
+# Run all tests (81+ tests across 4 packages)
 npm test
 
 # Run specific package tests
