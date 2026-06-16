@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { AiProviderConfig } from "@repo-auditor/ai-review";
 import type { AuditReport, Language, NetworkPolicy, OutputFormat } from "@repo-auditor/scanner-core";
-import { app, BrowserWindow, dialog, ipcMain, safeStorage } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage } from "electron";
 import { isAllowedIpcChannel } from "./ipc.js";
 
 interface ScanStartPayload {
@@ -30,6 +30,44 @@ interface AiModelsPayload {
 
 let mainWindow: BrowserWindow | undefined;
 
+function showAbout(): void {
+  dialog.showMessageBox({
+    type: "info",
+    title: `About ${app.getName()}`,
+    message: app.getName(),
+    detail: [
+      `Version: ${app.getVersion()}`,
+      "Author: Fred Wang",
+      "",
+      "A multi-layered security analysis tool that detects suspicious behavior in repositories, npm packages, and source code."
+    ].join("\n")
+  });
+}
+
+function createMenu(): void {
+  const isMac = process.platform === "darwin";
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac ? [{
+      label: app.getName(),
+      submenu: [
+        { role: "about" as const, click: () => showAbout() },
+        { type: "separator" as const },
+        { role: "quit" as const }
+      ]
+    }] : []),
+    {
+      label: "Help",
+      submenu: [
+        {
+          label: "About",
+          click: () => showAbout()
+        }
+      ]
+    }
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -49,6 +87,8 @@ async function createWindow(): Promise<void> {
   mainWindow.on("closed", () => {
     mainWindow = undefined;
   });
+
+  createMenu();
 
   await mainWindow.loadFile(path.join(app.getAppPath(), "src/renderer/index.html"));
 }
