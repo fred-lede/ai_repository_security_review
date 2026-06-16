@@ -9,9 +9,9 @@
     "build": "tsc -p tsconfig.json && cp src/preload.cjs build/preload.cjs",
     "dev": "npm run build && electron .",
     "package:mac": "npm run build && electron-builder --mac",
-    "package:win": "npm run build && electron-builder --win",
-    "package:linux": "npm run build && electron-builder --linux",
-    "package:all": "npm run build && electron-builder --mac --win --linux",
+    "package:win": "npm run build && electron-builder --win --x64",
+    "package:linux": "npm run build && electron-builder --linux --x64",
+    "package:all": "npm run build && electron-builder --mac --win --linux --x64",
     "test": "vitest run tests",
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
@@ -43,13 +43,11 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.png",
-      "arch": ["x64"]
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "assets/icon.png",
-      "arch": ["x64"]
+      "icon": "assets/icon.png"
     }
   }
 }
