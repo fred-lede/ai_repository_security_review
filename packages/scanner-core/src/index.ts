@@ -6,6 +6,7 @@ export {
   isSupportedArchive
 } from "./safeArchive.js";
 export { buildInventory, buildScanCoverage, LANGUAGE_PATTERNS } from "./inventory.js";
+export { listScannableFiles } from "./fileWalker.js";
 export { matchesGlob } from "./glob.js";
 export { buildDataFlowGraph } from "./dataFlow.js";
 export {
