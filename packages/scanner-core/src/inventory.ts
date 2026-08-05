@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { listScannableFiles } from "./fileWalker.js";
+import type { ScanCoverage } from "./types.js";
 
 export interface PackageScript {
   name: string;
@@ -384,6 +385,33 @@ function uniqueDangerousCalls(values: DangerousCall[]): DangerousCall[] {
     const lineOrder = a.line - b.line;
     return lineOrder === 0 ? a.pattern.localeCompare(b.pattern) : lineOrder;
   });
+}
+
+export function buildScanCoverage(inventory: ProjectInventory): ScanCoverage {
+  const byLanguage: ScanCoverage["byLanguage"] = {};
+  const filesWithDetections = new Set<string>();
+
+  for (const call of inventory.dangerousCalls) {
+    const entry = byLanguage[call.language] ?? { files: 0, detections: 0 };
+    entry.detections += 1;
+    byLanguage[call.language] = entry;
+    filesWithDetections.add(call.filePath);
+  }
+
+  for (const language of Object.keys(byLanguage) as LanguageId[]) {
+    byLanguage[language] = {
+      files: new Set(
+        inventory.dangerousCalls.filter((call) => call.language === language).map((call) => call.filePath)
+      ).size,
+      detections: byLanguage[language]!.detections
+    };
+  }
+
+  return {
+    totalFiles: inventory.files.length,
+    filesWithPatterns: filesWithDetections.size,
+    byLanguage
+  };
 }
 
 function isSuspiciousDependencySource(source: string): boolean {

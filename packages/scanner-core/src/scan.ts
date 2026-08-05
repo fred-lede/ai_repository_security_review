@@ -1,5 +1,5 @@
 import { buildDataFlowGraph } from "./dataFlow.js";
-import { buildInventory } from "./inventory.js";
+import { buildInventory, buildScanCoverage } from "./inventory.js";
 import {
   buildAttackSurface,
   renderDecisionRecord,
@@ -48,6 +48,7 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
   };
 
   report.attackSurface = buildAttackSurface(report);
+  report.coverage = buildScanCoverage(inventory);
 
   return {
     report,

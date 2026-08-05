@@ -81,4 +81,21 @@ describe("scan orchestration", () => {
       ])
     );
   });
+
+  it("reports scan coverage including language detections", async () => {
+    const result = await scanTarget(path.resolve("fixtures/malicious-package"), {
+      reviewMode: "full-audit",
+      networkPolicy: "offline",
+      outputFormats: ["json"]
+    });
+
+    expect(result.report.coverage).toEqual(
+      expect.objectContaining({
+        totalFiles: expect.any(Number),
+        filesWithPatterns: expect.any(Number),
+        byLanguage: expect.any(Object)
+      })
+    );
+    expect(result.report.coverage?.totalFiles).toBeGreaterThan(0);
+  });
 });

@@ -49,6 +49,26 @@ export interface ResolvedTarget {
   trustBoundary: "local" | "remote" | "archive";
 }
 
+export type LanguageId =
+  | "python"
+  | "javascript"
+  | "go"
+  | "java"
+  | "shell"
+  | "dockerfile"
+  | "yaml";
+
+export interface LanguageCoverage {
+  files: number;
+  detections: number;
+}
+
+export interface ScanCoverage {
+  totalFiles: number;
+  filesWithPatterns: number;
+  byLanguage: Partial<Record<LanguageId, LanguageCoverage>>;
+}
+
 export interface Finding {
   id: string;
   riskLevel: RiskLevel;
@@ -119,6 +139,7 @@ export interface AuditReport {
   dataFlow: DataFlowGraph;
   risk: RiskAssessment;
   attackSurface: AttackSurfaceEntry[];
+  coverage?: ScanCoverage;
   generatedAt: string;
   toolVersion: string;
 }
