@@ -1,6 +1,6 @@
 {
   "name": "repository-security-auditor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "author": "Fred Wang",
   "type": "module",
@@ -14,6 +14,7 @@
     "dev:cli": "tsx packages/cli/src/index.ts",
     "dev:electron": "npm --workspace apps/electron run dev",
     "package:mac": "npm --workspace apps/electron run package:mac",
+    "package:mac:local": "npm --workspace apps/electron run package:mac:local",
     "package:win": "npm --workspace apps/electron run package:win",
     "package:linux": "npm --workspace apps/electron run package:linux",
     "package:all": "npm --workspace apps/electron run package:all"

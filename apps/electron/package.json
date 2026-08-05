@@ -1,6 +1,6 @@
 {
   "name": "@repo-auditor/electron",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Desktop shell for Repository Security Auditor",
   "author": {
     "name": "Fred Wang",
@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.json && cp src/preload.cjs build/preload.cjs",
     "dev": "npm run build && electron .",
     "package:mac": "npm run build && electron-builder --mac",
+    "package:mac:local": "npm run build && electron-builder --mac && ./scripts/mac-local-sign.sh",
     "package:win": "npm run build && electron-builder --win --x64",
     "package:linux": "npm run build && electron-builder --linux --x64",
     "package:all": "npm run build && electron-builder --mac --win --linux --x64",
@@ -19,8 +20,8 @@
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "@repo-auditor/ai-review": "0.2.0",
-    "@repo-auditor/scanner-core": "0.2.0"
+    "@repo-auditor/ai-review": "0.3.0",
+    "@repo-auditor/scanner-core": "0.3.0"
   },
   "devDependencies": {
     "electron": "31.7.7",
