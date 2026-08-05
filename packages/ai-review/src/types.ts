@@ -27,3 +27,10 @@ export interface AiReviewResult {
     saferPattern?: string;
   }>;
 }
+
+export interface AiReviewOptions {
+  scanPath?: string;
+  maxRounds?: number;
+  maxFindingsPerBatch?: number;
+  maxTokensPerReview?: number;
+}
