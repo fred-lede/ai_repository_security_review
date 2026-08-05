@@ -76,4 +76,13 @@ describe("main window lifecycle", () => {
 
     expect(source).toContain('runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })');
   });
+
+  it("keeps clipboard shortcuts working via an Edit menu", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toMatch(/{ role: "cut" /);
+    expect(source).toMatch(/{ role: "copy" /);
+    expect(source).toMatch(/{ role: "paste" /);
+    expect(source).toMatch(/{ role: "selectAll" /);
+  });
 });
