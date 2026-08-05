@@ -84,7 +84,7 @@ describe("AI review prompt", () => {
       json: async () => ({ choices: [{ message: { content: "AI summary" } }] })
     }));
 
-    const result = await runAiReview(report, config, fetchImpl);
+    const result = await runAiReview(report, config, {}, fetchImpl);
 
     expect(result.summary).toBe("AI summary");
     expect(result.findingNotes).toEqual([
@@ -93,5 +93,58 @@ describe("AI review prompt", () => {
         saferPattern: "Remove sensitive payloads from outbound requests."
       })
     ]);
+  });
+});
+
+describe("batched agent review", () => {
+  it("runs an agent loop per batch and merges agent notes into the result", async () => {
+    const fullConfig = { ...config, dataSharingMode: "full-files" as const };
+    const calls: string[] = [];
+    const fetchImpl = vi.fn(async (...args: unknown[]) => {
+      calls.push(String((args[1] as { body?: string }).body ?? ""));
+      return {
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  type: "final",
+                  summary: "agent summary",
+                  notes: [{ findingId: "finding-1", explanation: "verified risk", falsePositiveNote: "none" }]
+                })
+              }
+            }
+          ]
+        })
+      };
+    });
+
+    const result = await runAiReview(
+      report,
+      fullConfig,
+      { scanPath: "fixture", maxFindingsPerBatch: 1, maxRounds: 1, maxTokensPerReview: 100000 },
+      fetchImpl
+    );
+
+    expect(result.summary).toBe("agent summary");
+    expect(result.findingNotes).toEqual([
+      expect.objectContaining({
+        findingId: "finding-1",
+        explanation: "verified risk",
+        falsePositiveNote: "none"
+      })
+    ]);
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
+  it("short-circuits with a placeholder when there are no findings", async () => {
+    const noFindings = { ...report, findings: [] };
+    const result = await runAiReview(noFindings, config, { scanPath: "fixture" });
+
+    expect(result.summary).toContain("AI review configured");
+    expect(result.findingNotes).toEqual([]);
   });
 });

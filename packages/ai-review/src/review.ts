@@ -1,7 +1,9 @@
 import type { AuditReport, Finding } from "@repo-auditor/scanner-core";
+import { runAgentLoop, type AgentNote } from "./agent.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
-import type { AiProviderConfig, AiReviewResult } from "./types.js";
+import { buildTools, type ReviewToolContext } from "./tools.js";
+import type { AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
 
 export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfig): string {
   const findings = report.findings.map((finding) => serializeFindingForPrompt(finding, config));
@@ -31,18 +33,160 @@ export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfi
   return config.redactionEnabled ? redactSecrets(prompt) : prompt;
 }
 
+const riskOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
+
 export async function runAiReview(
   report: AuditReport,
   config: AiProviderConfig,
+  options: AiReviewOptions = {},
   fetchImpl?: FetchLike
 ): Promise<AiReviewResult> {
-  const prompt = buildAiReviewPrompt(report, config);
-  const completion = await requestProviderCompletion(config, prompt, fetchImpl);
+  const scanPath = options.scanPath ?? report.target.localPath ?? undefined;
+  const maxRounds = options.maxRounds ?? 6;
+  const maxFindingsPerBatch = options.maxFindingsPerBatch ?? 10;
+  const maxTokensPerReview = options.maxTokensPerReview ?? 200_000;
+
+  const mode: ReviewToolContext["mode"] = config.dataSharingMode === "full-files" ? "full-files" : "snippets";
+  const ctx: ReviewToolContext = {
+    scanPath: scanPath ?? "",
+    mode,
+    allowedFiles: config.dataSharingMode === "finding-snippets" ? uniqueFiles(report.findings) : undefined
+  };
+  const tools = buildTools(config.dataSharingMode, ctx);
+
+  const batches = groupFindings(report.findings, maxFindingsPerBatch);
+  if (batches.length === 0) {
+    return createOfflineAiReviewPlaceholder(report, config);
+  }
+
+  const notes: AgentNote[] = [];
+  const summaries: string[] = [];
+  const rawTexts: string[] = [];
+  const budgetPerBatch = Math.max(2000, Math.floor(maxTokensPerReview / batches.length));
+
+  for (const batch of batches) {
+    const loopResult = await runAgentLoop(
+      config,
+      buildSystemPrompt(config),
+      buildBatchPrompt(report, batch, config, ctx),
+      tools,
+      ctx,
+      { maxRounds, maxTokensPerReview: budgetPerBatch },
+      fetchImpl
+    );
+
+    if (loopResult.result) {
+      summaries.push(loopResult.result.summary);
+      notes.push(...loopResult.result.notes);
+    } else if (loopResult.raw) {
+      rawTexts.push(loopResult.raw);
+    }
+  }
+
+  const fallback = createOfflineAiReviewPlaceholder(report, config);
+  const summary =
+    summaries.length > 0 ? summaries.join("\n\n") : rawTexts.filter(Boolean).join("\n\n") || fallback.summary;
 
   return {
-    ...createOfflineAiReviewPlaceholder(report, config),
-    summary: completion
+    providerType: config.type,
+    model: config.model,
+    generatedAt: new Date().toISOString(),
+    summary,
+    findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes
   };
+}
+
+function uniqueFiles(findings: Finding[]): string[] {
+  return Array.from(new Set(findings.map((finding) => finding.filePath)));
+}
+
+function groupFindings(findings: Finding[], maxPerBatch: number): Finding[][] {
+  if (findings.length === 0) {
+    return [];
+  }
+
+  const byCategory = new Map<string, Finding[]>();
+  for (const finding of findings) {
+    const list = byCategory.get(finding.category) ?? [];
+    list.push(finding);
+    byCategory.set(finding.category, list);
+  }
+
+  const ordered = Array.from(byCategory.entries()).sort(
+    (a, b) => (riskOrder[a[1][0].riskLevel] ?? 99) - (riskOrder[b[1][0].riskLevel] ?? 99)
+  );
+
+  const batches: Finding[][] = [];
+  for (const [, list] of ordered) {
+    for (let i = 0; i < list.length; i += maxPerBatch) {
+      batches.push(list.slice(i, i + maxPerBatch));
+    }
+  }
+  return batches;
+}
+
+function mergeNotes(
+  fallback: AiReviewResult["findingNotes"],
+  agentNotes: AgentNote[]
+): AiReviewResult["findingNotes"] {
+  const agentById = new Map(agentNotes.map((note) => [note.findingId, note]));
+  return fallback.map((note) => {
+    const agent = agentById.get(note.findingId);
+    if (!agent) {
+      return note;
+    }
+    return {
+      findingId: note.findingId,
+      explanation: agent.explanation,
+      falsePositiveNote: agent.falsePositiveNote,
+      saferPattern: agent.saferPattern ?? note.saferPattern
+    };
+  });
+}
+
+function buildSystemPrompt(config: AiProviderConfig): string {
+  const toolGuidance =
+    config.dataSharingMode === "metadata-only"
+      ? "No tools are available. Respond with a final JSON object based only on the metadata provided."
+      : "Read files and search code before concluding. Verify each finding against real code.";
+  return [
+    "You are a security audit review agent.",
+    toolGuidance,
+    "Respond ONLY with a single JSON object matching the requested schema."
+  ].join("\n");
+}
+
+function buildBatchPrompt(
+  report: AuditReport,
+  batch: Finding[],
+  config: AiProviderConfig,
+  ctx: ReviewToolContext
+): string {
+  const langInstruction: Record<string, string> = {
+    en: "You MUST respond in English.",
+    "zh-TW": "你必須使用繁體中文回覆。",
+    "zh-CN": "你必须使用简体中文回复。"
+  };
+  const lang = config.language ?? "zh-TW";
+  const findingsJson = JSON.stringify(batch.map((finding) => serializeFindingForPrompt(finding, config)), null, 2);
+  const fileHint =
+    ctx.allowedFiles && ctx.allowedFiles.length > 0
+      ? `\nFiles you may read: ${ctx.allowedFiles.join(", ")}`
+      : "";
+
+  const prompt = [
+    "You are investigating deterministic security scanner findings.",
+    "Use tools to read the actual source code and verify each finding before writing notes.",
+    "For each finding decide: real risk, likelihood of a false positive, and a safer pattern.",
+    `There are ${batch.length} finding(s) to review in this batch.`,
+    langInstruction[lang] ?? langInstruction["zh-TW"],
+    "",
+    "FINDINGS:",
+    findingsJson,
+    fileHint
+  ].join("\n");
+
+  return config.redactionEnabled ? redactSecrets(prompt) : prompt;
 }
 
 export function createOfflineAiReviewPlaceholder(report: AuditReport, config: AiProviderConfig): AiReviewResult {
