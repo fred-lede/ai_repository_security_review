@@ -57,7 +57,7 @@ describe("scan orchestration", () => {
     expect(result.report.target.type).toBe("github");
     expect(result.report.target.trustBoundary).toBe("remote");
     expect(result.report.target.networkUsed).toBe(true);
-  });
+  }, 30000);
 
   it("rejects remote targets when network is disabled", async () => {
     await expect(

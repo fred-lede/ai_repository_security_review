@@ -24,7 +24,7 @@
     "@repo-auditor/scanner-core": "0.3.0"
   },
   "devDependencies": {
-    "electron": "31.7.7",
+    "electron": "33.4.11",
     "electron-builder": "^24.13.3"
   },
   "build": {
