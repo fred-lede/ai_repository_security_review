@@ -1,5 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { renderRemediationList, renderSarifReport } from "../src/index.js";
+import { compileRule } from "../src/ruleTypes.js";
+import type { RuleDefinition } from "../src/ruleTypes.js";
 import type {
   Finding,
   FindingCategory,
@@ -72,5 +74,41 @@ describe("core types", () => {
   it("exports SARIF and remediation renderers from the public entrypoint", () => {
     expect(renderSarifReport).toEqual(expect.any(Function));
     expect(renderRemediationList).toEqual(expect.any(Function));
+  });
+});
+
+describe("compileRule pathPattern", () => {
+  it("only matches items whose filePath satisfies the pattern", () => {
+    const rule = compileRule({
+      id: "py-test",
+      description: "python eval",
+      category: "remote-code-execution",
+      defaultRiskLevel: "High",
+      inventoryField: "dangerousCalls",
+      pathPattern: "**/*.py",
+      conditions: [{ field: "pattern", operator: "equals", value: "python.eval" }],
+      explanation: "explain",
+      recommendedFix: "fix",
+      tags: []
+    });
+
+    expect(rule.match({ filePath: "src/main.py", pattern: "python.eval" })).toBe(true);
+    expect(rule.match({ filePath: "src/main.ts", pattern: "python.eval" })).toBe(false);
+  });
+
+  it("matches all paths when pathPattern is absent", () => {
+    const rule = compileRule({
+      id: "no-pattern",
+      description: "any",
+      category: "network",
+      defaultRiskLevel: "Medium",
+      inventoryField: "networkEndpoints",
+      conditions: [{ field: "endpoint", operator: "contains", value: "http" }],
+      explanation: "explain",
+      recommendedFix: "fix",
+      tags: []
+    });
+
+    expect(rule.match({ filePath: "anything/at/all.ts", endpoint: "https://x.test" })).toBe(true);
   });
 });

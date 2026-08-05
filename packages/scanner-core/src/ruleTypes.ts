@@ -1,5 +1,6 @@
 import type { ProjectInventory } from "./inventory.js";
 import type { Finding, FindingCategory, RiskLevel } from "./types.js";
+import { matchesGlob } from "./glob.js";
 
 export interface RuleMatchCondition {
   field: string;
@@ -13,6 +14,7 @@ export interface RuleDefinition {
   category: FindingCategory;
   defaultRiskLevel: RiskLevel;
   inventoryField: string;
+  pathPattern?: string;
   conditions: RuleMatchCondition[];
   explanation: string;
   recommendedFix: string;
@@ -28,10 +30,17 @@ export type CompiledRule = RuleDefinition & {
 };
 
 export function compileRule(rule: RuleDefinition): CompiledRule {
+  const pathAllowed = rule.pathPattern
+    ? (filePath: string) => matchesGlob(rule.pathPattern as string, filePath)
+    : () => true;
+
   return {
     ...rule,
     match: (item: unknown) => {
       const obj = item as Record<string, unknown>;
+      if (!pathAllowed(String(obj.filePath ?? ""))) {
+        return false;
+      }
       return rule.conditions.every((cond) => {
         const val = String(obj[cond.field] ?? "");
         switch (cond.operator) {
