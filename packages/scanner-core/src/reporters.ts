@@ -20,6 +20,7 @@ export function renderMarkdownReport(report: AuditReport, lang: Language = "zh-T
     `- ${t.t("report.networkUsed")}：${report.target.networkUsed ? t.t("report.yes") : t.t("report.no")}`,
     `- ${t.t("report.generatedAt")}：${report.generatedAt}`,
     "",
+    ...renderCoverageText(report, t),
     `## ${t.t("report.findings")}`,
     "",
     ...report.findings.flatMap((finding) => renderFinding(finding, t)),
@@ -169,6 +170,30 @@ export function renderRemediationList(report: AuditReport, lang: Language = "zh-
     null,
     2
   );
+}
+
+function renderCoverageText(report: AuditReport, t: ReturnType<typeof createTranslator>): string[] {
+  const coverage = report.coverage;
+  if (!coverage) {
+    return [];
+  }
+
+  const rows = Object.entries(coverage.byLanguage).map(([lang, data]) => {
+    const label = t.t(`language.${lang}`);
+    return `| ${label} | ${data?.files ?? 0} | ${data?.detections ?? 0} |`;
+  });
+
+  return [
+    `## ${t.t("report.coverage")}`,
+    "",
+    `- ${t.t("report.totalFiles")}：${coverage.totalFiles}`,
+    `- ${t.t("report.filesWithPatterns")}：${coverage.filesWithPatterns}`,
+    rows.length > 0 ? "" : undefined,
+    ...(rows.length > 0
+      ? [`| ${t.t("report.coverageLanguage")} | ${t.t("report.coverageFiles")} | ${t.t("report.coverageDetections")} |`, "|---|---|---|", ...rows]
+      : []),
+    ""
+  ].filter((line): line is string => line !== undefined);
 }
 
 export function renderDecisionRecord(report: AuditReport, lang: Language = "zh-TW"): string {
@@ -486,6 +511,20 @@ ${matrix.map(row => {
 }).join("\n")}
 </tbody>
 </table>
+</section>
+
+<section id="coverage">
+<h2>${escapeHtml(t.t("report.coverage"))}</h2>
+${report.coverage ? `
+<p>${escapeHtml(t.t("report.totalFiles"))}: ${report.coverage.totalFiles} &mdash; ${escapeHtml(t.t("report.filesWithPatterns"))}: ${report.coverage.filesWithPatterns}</p>
+<table>
+<thead>
+<tr><th>${escapeHtml(t.t("report.coverageLanguage"))}</th><th>${escapeHtml(t.t("report.coverageFiles"))}</th><th>${escapeHtml(t.t("report.coverageDetections"))}</th></tr>
+</thead>
+<tbody>
+${Object.entries(report.coverage.byLanguage).map(([lang, data]) => `<tr><td>${escapeHtml(t.t(`language.${lang}`))}</td><td>${data?.files ?? 0}</td><td>${data?.detections ?? 0}</td></tr>`).join("\n")}
+</tbody>
+</table>` : ""}
 </section>
 
 <section id="attack-surface">

@@ -110,7 +110,20 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "finding.codeSnippet": "Code Snippet",
     "finding.recommendedFix": "Recommended Fix",
     "finding.patchDraft": "Patch Draft",
-    "finding.showContext": "Show Context"
+    "finding.showContext": "Show Context",
+    "report.coverage": "Scan Coverage",
+    "report.totalFiles": "Total Files Scanned",
+    "report.filesWithPatterns": "Files with Pattern Detections",
+    "report.coverageLanguage": "Language",
+    "report.coverageFiles": "Files",
+    "report.coverageDetections": "Detections",
+    "language.python": "Python",
+    "language.javascript": "JavaScript/TypeScript",
+    "language.go": "Go",
+    "language.java": "Java",
+    "language.shell": "Shell",
+    "language.dockerfile": "Dockerfile",
+    "language.yaml": "YAML"
   },
   "zh-TW": {
     "report.title": "Repository 安全審查報告",
@@ -153,7 +166,20 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "finding.codeSnippet": "程式碼片段",
     "finding.recommendedFix": "建議修復",
     "finding.patchDraft": "修補草稿",
-    "finding.showContext": "顯示上下文"
+    "finding.showContext": "顯示上下文",
+    "report.coverage": "掃描覆蓋度",
+    "report.totalFiles": "掃描檔案總數",
+    "report.filesWithPatterns": "命中 Pattern 的檔案數",
+    "report.coverageLanguage": "語言",
+    "report.coverageFiles": "檔案數",
+    "report.coverageDetections": "偵測數",
+    "language.python": "Python",
+    "language.javascript": "JavaScript/TypeScript",
+    "language.go": "Go",
+    "language.java": "Java",
+    "language.shell": "Shell",
+    "language.dockerfile": "Dockerfile",
+    "language.yaml": "YAML"
   },
   "zh-CN": {
     "report.title": "仓库安全审查报告",
@@ -196,7 +222,20 @@ const reportStrings: Record<Language, Record<string, string>> = {
     "finding.codeSnippet": "代码片段",
     "finding.recommendedFix": "建议修复",
     "finding.patchDraft": "修补草稿",
-    "finding.showContext": "显示上下文"
+    "finding.showContext": "显示上下文",
+    "report.coverage": "扫描覆盖率",
+    "report.totalFiles": "扫描文件总数",
+    "report.filesWithPatterns": "命中 Pattern 的文件数",
+    "report.coverageLanguage": "语言",
+    "report.coverageFiles": "文件数",
+    "report.coverageDetections": "检测数",
+    "language.python": "Python",
+    "language.javascript": "JavaScript/TypeScript",
+    "language.go": "Go",
+    "language.java": "Java",
+    "language.shell": "Shell",
+    "language.dockerfile": "Dockerfile",
+    "language.yaml": "YAML"
   },
 };
 

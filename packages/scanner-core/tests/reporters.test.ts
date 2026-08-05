@@ -415,3 +415,27 @@ function makeReport(findings: Finding[], dataFlow: DataFlowGraph): AuditReport {
     toolVersion: "0.1.0"
   };
 }
+
+describe("coverage rendering", () => {
+  it("includes a coverage section in the markdown report when present", () => {
+    const report = makeReport([], { nodes: [], edges: [] });
+    report.coverage = {
+      totalFiles: 42,
+      filesWithPatterns: 7,
+      byLanguage: { python: { files: 3, detections: 5 } }
+    };
+    const md = renderMarkdownReport(report, "en");
+
+    expect(md).toContain("Scan Coverage");
+    expect(md).toContain("Total Files Scanned：42");
+    expect(md).toContain("Files with Pattern Detections：7");
+    expect(md).toContain("Python");
+    expect(md).toContain("5");
+  });
+
+  it("omits the coverage section when coverage is absent", () => {
+    const md = renderMarkdownReport(makeReport([], { nodes: [], edges: [] }), "en");
+
+    expect(md).not.toContain("Scan Coverage");
+  });
+});
