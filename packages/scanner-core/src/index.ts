@@ -5,7 +5,8 @@ export {
   assertSafeArchiveEntry,
   isSupportedArchive
 } from "./safeArchive.js";
-export { buildInventory } from "./inventory.js";
+export { buildInventory, buildScanCoverage, LANGUAGE_PATTERNS } from "./inventory.js";
+export { matchesGlob } from "./glob.js";
 export { buildDataFlowGraph } from "./dataFlow.js";
 export {
   renderDecisionRecord,
@@ -30,7 +31,7 @@ export { acquireRemoteTarget, cleanupRemoteDir } from "./remoteAcquisition.js";
 export { scanTarget } from "./scan.js";
 export type { ScanOutputName, ScanResult } from "./scan.js";
 export { resolveTarget } from "./targetResolver.js";
-export type { DependencySource, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
+export type { DangerousCall, DependencySource, LanguageId, LanguagePattern, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
 export type { ArchiveEntryType } from "./safeArchive.js";
 export type {
   AttackSurfaceEntry,
@@ -43,6 +44,7 @@ export type {
   Finding,
   FindingCategory,
   Language,
+  LanguageCoverage,
   NetworkPolicy,
   OutputFormat,
   Remediation,
@@ -50,6 +52,7 @@ export type {
   ReviewMode,
   RiskAssessment,
   RiskLevel,
+  ScanCoverage,
   ScanOptions,
   TargetType
 } from "./types.js";
