@@ -70,4 +70,10 @@ describe("main window lifecycle", () => {
     expect(source).not.toContain('import { scanTarget');
     expect(source).not.toContain('import { createOfflineAiReviewPlaceholder');
   });
+
+  it("passes the resolved target path to the AI review agent", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toContain('runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })');
+  });
 });

@@ -194,7 +194,7 @@ ipcMain.handle("ai-review:run", async (_event, payload: AiReviewPayload) => {
     language: payload.provider.language ?? "zh-TW"
   };
   return payload.execute
-    ? runAiReview(payload.report, provider)
+    ? runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })
     : createOfflineAiReviewPlaceholder(payload.report, provider);
 });
 
