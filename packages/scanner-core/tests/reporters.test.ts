@@ -255,7 +255,8 @@ describe("reporters", () => {
         filesystemReads: [{ filePath: "src/index.ts", line: 7, snippet: "readFileSync(`${process.env.HOME}/.ssh/config`)" }],
         githubWorkflowFiles: [".github/workflows/ci.yml"],
         electronIpcFiles: ["src/main.ts"],
-        persistenceIndicators: [{ filePath: "src/db.ts", line: 4, snippet: "await prisma.user.create({ data })" }]
+        persistenceIndicators: [{ filePath: "src/db.ts", line: 4, snippet: "await prisma.user.create({ data })" }],
+        dangerousCalls: []
       },
       findings
     );

