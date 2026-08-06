@@ -13,6 +13,7 @@ export interface AiProviderConfig {
   timeoutMs: number;
   retryLimit: number;
   language?: AiLanguage;
+  contextWindow?: number;
 }
 
 export interface AiReviewResult {
@@ -26,6 +27,16 @@ export interface AiReviewResult {
     falsePositiveNote?: string;
     saferPattern?: string;
   }>;
+}
+
+export interface AiNewFinding {
+  category: "phishing" | "network-attack" | "data-exfiltration";
+  filePath: string;
+  lineStart: number;
+  lineEnd: number;
+  codeSnippet: string;
+  explanation: string;
+  recommendedFix: string;
 }
 
 export interface AiReviewOptions {

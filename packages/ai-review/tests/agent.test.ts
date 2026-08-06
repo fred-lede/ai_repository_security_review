@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseAgentResponse, runAgentLoop, estimateTokens, type AgentFinalResult } from "../src/agent.js";
+import { parseAgentResponse, runAgentLoop, estimateTokens, buildAgentPrompt, type AgentFinalResult } from "../src/agent.js";
 import type { AiProviderConfig } from "../src/types.js";
 import type { ToolDefinition, ReviewToolContext } from "../src/tools.js";
 
@@ -96,5 +96,105 @@ describe("estimateTokens", () => {
   it("approximates tokens from character count", () => {
     expect(estimateTokens("abcde")).toBe(2);
     expect(estimateTokens("")).toBe(1);
+  });
+});
+
+describe("newFindings and history pruning", () => {
+  it("parses newFindings from a final response", () => {
+    const parsed = parseAgentResponse(
+      JSON.stringify({
+        type: "final",
+        summary: "found an exfil sink",
+        notes: [],
+        newFindings: [
+          {
+            category: "data-exfiltration",
+            filePath: "scripts/upload.ts",
+            lineStart: 3,
+            lineEnd: 3,
+            codeSnippet: "fetch(discordWebhook)",
+            explanation: "verified webhook sink sending local files",
+            recommendedFix: "remove the webhook call"
+          }
+        ]
+      })
+    );
+
+    expect(parsed?.type).toBe("final");
+    if (parsed?.type === "final") {
+      expect(parsed.result.newFindings).toHaveLength(1);
+      expect(parsed.result.newFindings[0].category).toBe("data-exfiltration");
+      expect(parsed.result.newFindings[0].filePath).toBe("scripts/upload.ts");
+    }
+  });
+
+  it("prunes oldest tool results when the prompt exceeds the budget", async () => {
+    let callCount = 0;
+    const fetchImpl = vi.fn(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => "",
+          json: async () => ({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    type: "tool_call",
+                    tool: "file_read",
+                    args: { path: "test.txt" }
+                  })
+                }
+              }
+            ]
+          })
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ type: "final", summary: "done", notes: [] })
+              }
+            }
+          ]
+        })
+      };
+    });
+
+    const config: AiProviderConfig = {
+      type: "cloud",
+      baseUrl: "https://api.example.test/v1",
+      model: "gpt-test",
+      dataSharingMode: "full-files",
+      redactionEnabled: true,
+      timeoutMs: 30000,
+      retryLimit: 0,
+      contextWindow: 1024
+    };
+    const tools: ToolDefinition[] = [
+      {
+        name: "file_read",
+        description: "read a file",
+        run: async () => "x".repeat(2000)
+      }
+    ];
+    const result = await runAgentLoop(
+      config,
+      "system",
+      "review this",
+      tools,
+      { scanPath: "/tmp", mode: "full-files" },
+      { maxRounds: 10, maxTokensPerReview: 4000 },
+      fetchImpl
+    );
+
+    expect(result.result?.summary).toBe("done");
   });
 });

@@ -1,6 +1,6 @@
 import { requestProviderCompletion, type FetchLike } from "./providers.js";
 import type { ToolDefinition, ReviewToolContext } from "./tools.js";
-import type { AiProviderConfig } from "./types.js";
+import type { AiNewFinding, AiProviderConfig } from "./types.js";
 
 export interface AgentNote {
   findingId: string;
@@ -12,6 +12,7 @@ export interface AgentNote {
 export interface AgentFinalResult {
   summary: string;
   notes: AgentNote[];
+  newFindings: AiNewFinding[];
 }
 
 export interface AgentLoopResult {
@@ -66,11 +67,23 @@ export function parseAgentResponse(text: string): AgentResponse {
     const notes = Array.isArray(obj.notes)
       ? (obj.notes as AgentNote[]).filter((n) => n && typeof n.findingId === "string")
       : [];
+    const newFindings = Array.isArray(obj.newFindings)
+      ? (obj.newFindings as AiNewFinding[]).filter(
+          (nf) =>
+            nf &&
+            typeof nf === "object" &&
+            typeof nf.category === "string" &&
+            typeof nf.filePath === "string" &&
+            typeof nf.codeSnippet === "string" &&
+            typeof nf.explanation === "string"
+        )
+      : [];
     return {
       type: "final",
       result: {
         summary: typeof obj.summary === "string" ? obj.summary : "",
-        notes
+        notes,
+        newFindings
       }
     };
   }
@@ -102,9 +115,31 @@ export function buildAgentPrompt(
     ...history.map((entry, i) => `[${i + 1}]\n${entry}`),
     "",
     "RESPOND WITH A SINGLE JSON OBJECT:",
-    '{"type":"tool_call","tool":"<name>","args":{...}}  or  {"type":"final","summary":"...","notes":[{"findingId":"...","explanation":"...","falsePositiveNote":"...","saferPattern":"..."}]}',
+    '{"type":"tool_call","tool":"<name>","args":{...}}  or  {"type":"final","summary":"...","notes":[...],"newFindings":[...]}',
     "Respond with only the JSON object, no surrounding text."
   ].join("\n");
+}
+
+export function resolveTokenBudget(config: AiProviderConfig, maxTokensPerReview: number): number {
+  const contextWindow = config.contextWindow ?? (config.type === "ollama" ? 32768 : 131072);
+  return Math.max(2000, Math.min(maxTokensPerReview, Math.floor(contextWindow * 0.7)));
+}
+
+function buildPromptWithinBudget(
+  systemPrompt: string,
+  tools: ToolDefinition[],
+  history: string[],
+  budget: number
+): string {
+  let pruned = [...history];
+  while (pruned.length > 1 && estimateTokens(buildAgentPrompt(systemPrompt, tools, pruned)) > budget) {
+    const idx = pruned.findIndex((entry) => entry.startsWith("<tool_result>"));
+    if (idx === -1) {
+      break;
+    }
+    pruned = pruned.slice(0, idx).concat(pruned.slice(idx + 1));
+  }
+  return buildAgentPrompt(systemPrompt, tools, pruned);
 }
 
 export async function runAgentLoop(
@@ -117,11 +152,11 @@ export async function runAgentLoop(
   fetchImpl?: FetchLike
 ): Promise<AgentLoopResult> {
   const history: string[] = [initialPrompt];
-  let budget = options.maxTokensPerReview;
+  let budget = resolveTokenBudget(config, options.maxTokensPerReview);
   let raw = "";
 
   for (let round = 0; round < options.maxRounds; round += 1) {
-    const prompt = buildAgentPrompt(systemPrompt, tools, history);
+    const prompt = buildPromptWithinBudget(systemPrompt, tools, history, budget);
     budget -= estimateTokens(prompt);
     if (budget <= 0) {
       break;
