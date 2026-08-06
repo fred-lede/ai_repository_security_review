@@ -22,6 +22,7 @@ interface AiReviewPayload {
   report: AuditReport;
   provider: AiProviderConfig;
   execute?: boolean;
+  reportProgress?: boolean;
 }
 
 interface AiModelsPayload {
@@ -198,16 +199,28 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
   return { written };
 });
 
-ipcMain.handle("ai-review:run", async (_event, payload: AiReviewPayload) => {
+ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
   assertAllowed("ai-review:run");
-  const { createOfflineAiReviewPlaceholder, runAiReview } = await import("@repo-auditor/ai-review");
+  const { createOfflineAiReviewPlaceholder, mergeAiFindingsIntoReport, runAiReview } = await import("@repo-auditor/ai-review");
   const provider = {
     ...payload.provider,
     language: payload.provider.language ?? "zh-TW"
   };
-  return payload.execute
-    ? runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })
+  const onBatchProgress = payload.reportProgress
+    ? (done: number, total: number) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send("ai-review:progress", { done, total });
+        }
+      }
+    : undefined;
+  const result = payload.execute
+    ? await runAiReview(payload.report, provider, {
+        scanPath: payload.report.target.localPath ?? undefined,
+        onBatchProgress
+      })
     : createOfflineAiReviewPlaceholder(payload.report, provider);
+  const mergedReport = mergeAiFindingsIntoReport(payload.report, result);
+  return { ...result, mergedReport };
 });
 
 ipcMain.handle("ai-models:list", async (_event, payload: AiModelsPayload) => {

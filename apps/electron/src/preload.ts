@@ -20,5 +20,9 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   aiReviewRun: (payload: unknown) => invoke("ai-review:run", payload),
   aiModelsList: (payload: unknown) => invoke("ai-models:list", payload),
   aiConnectionTest: (payload: unknown) => invoke("ai-connection:test", payload),
-  folderOpen: (payload: unknown) => invoke("folder:open", payload)
+  folderOpen: (payload: unknown) => invoke("folder:open", payload),
+  onAiReviewProgress: (handler: (p: { done: number; total: number }) => void) => {
+    ipcRenderer.on("ai-review:progress", (_event, p) => handler(p));
+    return () => ipcRenderer.removeAllListeners("ai-review:progress");
+  }
 });

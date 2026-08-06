@@ -581,7 +581,8 @@
           sourceNotAvailable: "Source file not available",
           exportSuccess: "Reports exported successfully",
           exportFailed: "Export failed",
-          noScanToExport: "Run a scan first before exporting"
+          noScanToExport: "Run a scan first before exporting",
+          aiBatchProgress: "AI batch %done% of %total% done"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -630,7 +631,8 @@
           sourceNotAvailable: "原始檔案無法使用",
           exportSuccess: "報告匯出成功",
           exportFailed: "匯出失敗",
-          noScanToExport: "請先執行掃描再匯出"
+          noScanToExport: "請先執行掃描再匯出",
+          aiBatchProgress: "AI 批次 %done% / %total% 完成"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -679,7 +681,8 @@
           sourceNotAvailable: "源文件无法使用",
           exportSuccess: "报告导出成功",
           exportFailed: "导出失败",
-          noScanToExport: "请先执行扫描再导出"
+          noScanToExport: "请先执行扫描再导出",
+          aiBatchProgress: "AI 批次 %done% / %total% 完成"
         }
       };
 
@@ -939,10 +942,15 @@
         reviewBtn.textContent = t("reviewing");
         $("preview").innerHTML = `<span class="spinner"></span>${t("sendingToAi")}`;
 
+        const unsubProgress = window.repoAuditor.onAiReviewProgress((p) => {
+          $("preview").innerHTML = `<span class="spinner"></span>${t("aiBatchProgress").replace("%done%", p.done).replace("%total%", p.total)}`;
+        });
+
         try {
           state.aiReview = await window.repoAuditor.aiReviewRun({
             report: state.result.report,
             execute: true,
+            reportProgress: true,
             provider: {
               language: currentLang(),
               type: $("provider-type").value,
@@ -955,12 +963,17 @@
               retryLimit: 1
             }
           });
+          if (state.aiReview.mergedReport) {
+            state.result = { ...state.result, report: state.aiReview.mergedReport, outputs: undefined };
+            renderResult(state.result);
+          }
           $("preview").className = "";
           $("preview").textContent = JSON.stringify(state.aiReview, null, 2);
         } catch (error) {
           $("preview").className = "hint error";
           $("preview").textContent = `${t("aiReviewFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
         } finally {
+          unsubProgress();
           reviewBtn.disabled = false;
           reviewBtn.textContent = t("prepareAiReview");
         }

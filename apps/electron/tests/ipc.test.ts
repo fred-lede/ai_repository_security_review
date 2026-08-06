@@ -12,6 +12,7 @@ describe("Electron IPC allowlist", () => {
       "report:read",
       "report:export",
       "ai-review:run",
+      "ai-review:progress",
       "ai-models:list",
       "ai-connection:test",
       "folder:open",
@@ -74,7 +75,12 @@ describe("main window lifecycle", () => {
   it("passes the resolved target path to the AI review agent", () => {
     const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
 
-    expect(source).toContain('runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })');
+    expect(source).toContain('runAiReview(payload.report, provider, {');
+    expect(source).toContain('scanPath: payload.report.target.localPath ?? undefined');
+  });
+
+  it("keeps ai-review:run in the IPC allowlist", () => {
+    expect(isAllowedIpcChannel("ai-review:run")).toBe(true);
   });
 
   it("keeps clipboard shortcuts working via an Edit menu", () => {

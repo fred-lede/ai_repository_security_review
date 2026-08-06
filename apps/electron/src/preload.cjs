@@ -18,5 +18,9 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   keySave: (payload) => invoke("key:save", payload),
   keyLoad: () => invoke("key:load"),
   keyDelete: () => invoke("key:delete"),
-  sourceRead: (payload) => invoke("source:read", payload)
+  sourceRead: (payload) => invoke("source:read", payload),
+  onAiReviewProgress: (handler) => {
+    ipcRenderer.on("ai-review:progress", (_event, p) => handler(p));
+    return () => ipcRenderer.removeAllListeners("ai-review:progress");
+  }
 });
