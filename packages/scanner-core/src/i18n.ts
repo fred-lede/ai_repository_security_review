@@ -324,9 +324,9 @@ const explanationTranslations: Record<Language, Record<string, string>> = {
     "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.":
       "代码读取密码字段、localStorage 或 cookie。若加上对外传输，即为凭证窃取。",
     "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.":
-      "代码注册键盘监听器或钩子 API 以截取按键输入，这是钓鱼/键盘侧录恶意软件的特征。",
+      "代码注册键盘监听器或钩子 API 以截取按键输入，这是钓鱼/键盘记录恶意软件的特征。",
     "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).":
-      "代码通过外泄通道（webhook、编码串流、非 HTTP 连接或文件上传）发送数据。",
+      "代码通过外泄通道（webhook、编码数据流、非 HTTP 连接或文件上传）发送数据。",
     "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination.":
       "项目包含敏感来源（环境变量、文件系统读取或命令执行）以及对外数据外泄 sink。这是可能的数据外泄候选 — 请审查敏感数据是否可能流向此目的地。"
   }

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildDataFlowGraph } from "../src/dataFlow.js";
+import { createTranslator } from "../src/i18n.js";
 import { buildInventory } from "../src/inventory.js";
 import {
   renderDecisionRecord,
@@ -516,5 +517,55 @@ describe("coverage rendering", () => {
     const md = renderMarkdownReport(makeReport([], { nodes: [], edges: [] }), "en");
 
     expect(md).not.toContain("Scan Coverage");
+  });
+});
+
+describe("threat rule translation coverage", () => {
+  const threatRuleExplanations = [
+    "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.",
+    "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.",
+    "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.",
+    "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.",
+    "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.",
+    "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).",
+    "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination."
+  ];
+  const threatRuleRecommendedFixes = [
+    "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.",
+    "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.",
+    "Remove scanning utilities unless this is an authorized security tool with documented scope.",
+    "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.",
+    "Remove keystroke capture unless it is an explicitly documented accessibility feature.",
+    "Remove unauthorized outbound channels and route data only through approved, audited endpoints.",
+    "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code."
+  ];
+  const threatRuleStrings = [...threatRuleExplanations, ...threatRuleRecommendedFixes];
+
+  it("covers all 14 threat-rule strings", () => {
+    expect(threatRuleStrings).toHaveLength(14);
+  });
+
+  it("translates every threat-rule explanation into zh-CN", () => {
+    const t = createTranslator("zh-CN");
+    for (const s of threatRuleExplanations) {
+      expect(t.explanation(s)).not.toBe(s);
+    }
+  });
+
+  it("translates every threat-rule recommended fix into zh-CN", () => {
+    const t = createTranslator("zh-CN");
+    for (const s of threatRuleRecommendedFixes) {
+      expect(t.recommendedFix(s)).not.toBe(s);
+    }
+  });
+
+  it("self-maps threat-rule strings in en", () => {
+    const t = createTranslator("en");
+    for (const s of threatRuleExplanations) {
+      expect(t.explanation(s)).toBe(s);
+    }
+    for (const s of threatRuleRecommendedFixes) {
+      expect(t.recommendedFix(s)).toBe(s);
+    }
   });
 });
