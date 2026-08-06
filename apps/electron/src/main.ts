@@ -242,7 +242,7 @@ ipcMain.handle("finding:review", async (_event, payload: FindingReviewPayload) =
   const { runDeepDive } = await import("@repo-auditor/ai-review");
   const provider = {
     ...payload.provider,
-    language: payload.provider.language ?? "zh-TW",
+    language: payload.language ?? payload.provider.language ?? "zh-TW",
     redactionEnabled: true,
     timeoutMs: 120000,
     retryLimit: 1
