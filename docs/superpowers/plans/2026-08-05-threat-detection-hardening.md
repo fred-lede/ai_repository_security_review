@@ -563,16 +563,19 @@ Now update `applyBuiltinRules` (line 382-399). Change the body to add the correl
 And add the correlation helper after `networkRule` (after line 353):
 
 ```ts
-export function exfiltrationCorrelation(inventory: ProjectInventory): Finding[] {
+export function exfiltrationCorrelation(
+  inventory: ProjectInventory,
+  existing: Finding[]
+): Finding[] {
   const sinkPatterns = new Set(["webhook-sink", "encoded-sink", "non-http-sink", "file-upload-sink"]);
   const hasSensitiveSource =
     inventory.environmentVariables.length > 0 ||
     inventory.filesystemReads.length > 0 ||
     inventory.commandExecutions.length > 0;
-  const findings: Finding[] = [];
+  const newFindings: Finding[] = [];
 
   if (!hasSensitiveSource) {
-    return findings;
+    return newFindings;
   }
 
   for (const signal of inventory.threatSignals) {
@@ -580,8 +583,11 @@ export function exfiltrationCorrelation(inventory: ProjectInventory): Finding[] 
       continue;
     }
 
-    const alreadyExfil = findings.find(
-      (f) => f.filePath === signal.filePath && f.lineStart === signal.line
+    const alreadyExfil = existing.find(
+      (f) =>
+        f.category === "data-exfiltration" &&
+        f.filePath === signal.filePath &&
+        f.lineStart === signal.line
     );
     if (alreadyExfil) {
       alreadyExfil.evidenceTags = Array.from(
@@ -590,7 +596,7 @@ export function exfiltrationCorrelation(inventory: ProjectInventory): Finding[] 
       continue;
     }
 
-    findings.push({
+    newFindings.push({
       id: "",
       category: "data-exfiltration",
       riskLevel: "High",
@@ -607,11 +613,13 @@ export function exfiltrationCorrelation(inventory: ProjectInventory): Finding[] 
     });
   }
 
-  return findings;
+  return newFindings;
 }
 ```
 
-Note: `exfiltrationCorrelation` emits `data-exfiltration` findings for **all** sink signals when a sensitive source exists anywhere; the matching `exfiltration-sink` builtin rule already emits one finding per signal, so the correlation pass augments those findings' tags instead of duplicating them. The `alreadyExfil` branch looks up findings emitted by the `exfiltration-sink` rule for the same file/line and adds the tag there. Because builtin rules run before the correlation pass, that lookup works.
+Note: `exfiltrationCorrelation` receives the accumulated `findings` as `existing` and augments the `exfiltration-sink` rule findings in place (adding `exfiltration-candidate`), returning only genuinely-orphaned new findings. Because builtin rules run before the correlation pass, that lookup works.
+
+> **Plan correction (shipped in `c80f86e`):** the original snippet passed only `inventory`, so its `alreadyExfil` lookup searched the helper's own empty array and would have duplicated every sink finding. The shipped signature is `(inventory, existing)`; `applyBuiltinRules` calls `findings.push(...exfiltrationCorrelation(inventory, findings))`. The lookup also guards `f.category === "data-exfiltration"` so an unrelated finding on the same file/line is never tagged. Behavior note (approved): findings are intentionally emitted **per signal** — a single line matching multiple patterns yields multiple findings (e.g. `nc -l -p 4444 -e /bin/sh` → `reverse-shell` + `bind-shell`).
 
 - [ ] **Step 4: Run test to verify it passes**
 
