@@ -111,7 +111,7 @@ describe("collectThreatSignals", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/threatPatterns.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/threatPatterns.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL with "Cannot find module '../src/threatPatterns.js'"
 
 - [ ] **Step 3: Add `ThreatFamily` / `ThreatSignal` types to `types.ts`**
@@ -250,7 +250,7 @@ export function collectThreatSignals(content: string, filePath: string): ThreatS
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/threatPatterns.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/threatPatterns.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS (5 tests)
 
 - [ ] **Step 6: Export types from `index.ts`**
@@ -306,7 +306,7 @@ Check whether `inventory.test.ts` already has a `createProject` helper — if it
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/inventory.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/inventory.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL with "inventory.threatSignals is undefined"
 
 - [ ] **Step 3: Add field to `ProjectInventory`**
@@ -339,7 +339,7 @@ import { collectThreatSignals } from "./threatPatterns.js";
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/inventory.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/inventory.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -448,7 +448,7 @@ describe("threat-family rules", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/rules.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/rules.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL (threat rules not implemented; new categories unknown)
 
 - [ ] **Step 3: Implement the 6 rules + correlation helper in `defaultRules.ts`**
@@ -615,7 +615,7 @@ Note: `exfiltrationCorrelation` emits `data-exfiltration` findings for **all** s
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/rules.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/rules.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS (including the 5 new threat-family tests)
 
 - [ ] **Step 5: Export the new helper from `index.ts`**
@@ -706,7 +706,7 @@ it("does not let AI-sourced findings trigger Block", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/reporters.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/reporters.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL — first test decision not Block (categories not blocking); second test blocks the AI-sourced finding
 
 - [ ] **Step 3: Implement risk changes**
@@ -742,7 +742,7 @@ const blocking = findings.filter(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm --workspace packages/scanner-core test -- --run tests/reporters.test.ts`
+Run: `npx vitest run packages/scanner-core/tests/reporters.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -827,7 +827,7 @@ For zh-TW (sample translations — fill the rest consistently):
 
 - [ ] **Step 3: Verify build + tests pass**
 
-Run: `npm --workspace packages/scanner-core test`
+Run: `npx vitest run packages/scanner-core/tests` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS
 
 - [ ] **Step 4: Commit**
@@ -914,7 +914,7 @@ it("prunes oldest tool results when the prompt exceeds the budget", async () => 
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/ai-review test -- --run tests/agent.test.ts`
+Run: `npx vitest run packages/ai-review/tests/agent.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL — `newFindings` not parsed; `contextWindow` not in type
 
 - [ ] **Step 3: Add `contextWindow` to `AiProviderConfig`**
@@ -1015,7 +1015,7 @@ const prompt = buildPromptWithinBudget(systemPrompt, tools, history, budget);
 
 - [ ] **Step 6: Run test to verify it passes**
 
-Run: `npm --workspace packages/ai-review test -- --run tests/agent.test.ts`
+Run: `npx vitest run packages/ai-review/tests/agent.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS
 
 - [ ] **Step 7: Export `AiNewFinding` + `resolveTokenBudget`**
@@ -1133,7 +1133,7 @@ describe("mergeAiFindingsIntoReport", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm --workspace packages/ai-review test -- --run tests/review.test.ts`
+Run: `npx vitest run packages/ai-review/tests/review.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: FAIL — `normalizeAiFindings` / `mergeAiFindingsIntoReport` not exported
 
 - [ ] **Step 3: Add `AiReviewResult` fields + options to `types.ts`**
@@ -1326,7 +1326,7 @@ The offline placeholder (line 192-...) must also return the new fields:
 
 - [ ] **Step 7: Run test to verify it passes**
 
-Run: `npm --workspace packages/ai-review test -- --run tests/review.test.ts`
+Run: `npx vitest run packages/ai-review/tests/review.test.ts` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS
 
 - [ ] **Step 8: Export new functions from `index.ts`**
@@ -1339,7 +1339,7 @@ export { buildAiReviewPrompt, createOfflineAiReviewPlaceholder, mergeAiFindingsI
 
 - [ ] **Step 9: Run full ai-review suite + typecheck**
 
-Run: `npm --workspace packages/ai-review test`
+Run: `npx vitest run packages/ai-review/tests` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Run: `npm run typecheck --workspace packages/ai-review`
 Expected: PASS
 
@@ -1373,7 +1373,7 @@ it("keeps ai-review:run in the IPC allowlist", () => {
 
 - [ ] **Step 2: Run test to verify it fails/passes**
 
-Run: `npm --workspace apps/electron test`
+Run: `npx vitest run apps/electron/tests` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Expected: PASS (existing allowlist already covers `ai-review:run`; the added test is a regression guard)
 
 - [ ] **Step 3: Update `ai-review:run` handler in `main.ts`**
@@ -1471,7 +1471,7 @@ Add `onAiReviewProgress` to `apps/electron/src/preload.ts` and `preload.cjs` (a 
 
 - [ ] **Step 6: Run tests + build**
 
-Run: `npm --workspace apps/electron test`
+Run: `npx vitest run apps/electron/tests` (from repo root; the `npm --workspace` form is broken because the root vitest.config.ts include patterns are repo-root-relative)
 Run: `npm run build`
 Expected: PASS
 
