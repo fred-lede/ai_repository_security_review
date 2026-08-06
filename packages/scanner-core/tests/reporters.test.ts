@@ -435,6 +435,28 @@ describe("reporters", () => {
     expect(risk.decision).toBe("Needs Review");
     expect(risk.blockingFindingIds).not.toContain("finding-1");
   });
+
+  it("does not let AI-sourced Critical findings trigger Block", () => {
+    const risk = assessRisk([
+      {
+        id: "finding-1",
+        riskLevel: "Critical",
+        category: "phishing",
+        filePath: "phish.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "credential harvest",
+        explanation: "ai-reported credential harvesting",
+        recommendedFix: "remove",
+        evidenceTags: ["phishing", "credential-harvesting"],
+        source: "ai",
+        confidence: "High"
+      }
+    ]);
+
+    expect(risk.decision).toBe("Pass");
+    expect(risk.blockingFindingIds).not.toContain("finding-1");
+  });
 });
 
 function makeFinding(overrides: Partial<Finding> = {}): Finding {
