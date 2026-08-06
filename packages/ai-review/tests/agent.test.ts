@@ -220,3 +220,45 @@ describe("newFindings and history pruning", () => {
     expect(result.result?.summary).toBe("done");
   });
 });
+
+describe("custom final schema via parseResponse + finalExample", () => {
+  const ctx: ReviewToolContext = { scanPath: "", mode: "full-files" };
+
+  it("builds prompts with a custom final schema example", () => {
+    const prompt = buildAgentPrompt(
+      "sys",
+      [],
+      ["initial"],
+      '{"type":"final","verdict":"real|false-positive|uncertain","analysis":"...","fixSteps":[...],"correctedCode":"..."}'
+    );
+    expect(prompt).toContain('"verdict"');
+    expect(prompt).not.toContain('"newFindings"');
+  });
+
+  it("returns a custom-shaped final result from a custom parser", async () => {
+    const fetchImpl = jsonCompletion(
+      JSON.stringify({ type: "final", verdict: "real", analysis: "confirmed", fixSteps: [], correctedCode: "" })
+    );
+    const result = await runAgentLoop(
+      config,
+      "system",
+      "initial",
+      [],
+      ctx,
+      {
+        maxRounds: 1,
+        maxTokensPerReview: 100000,
+        parseResponse: (text: string) => {
+          const parsed = JSON.parse(text) as Record<string, unknown>;
+          if (parsed.type === "final") {
+            return { type: "final", result: { verdict: String(parsed.verdict) } };
+          }
+          return undefined;
+        },
+        finalExample: '{"type":"final","verdict":"real"}'
+      },
+      fetchImpl
+    );
+    expect(result.result).toEqual({ verdict: "real" });
+  });
+});

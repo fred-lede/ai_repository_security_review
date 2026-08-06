@@ -15,21 +15,29 @@ export interface AgentFinalResult {
   newFindings: AiNewFinding[];
 }
 
-export interface AgentLoopResult {
-  result?: AgentFinalResult;
+export interface ToolCallResponse {
+  type: "tool_call";
+  tool: string;
+  args: Record<string, unknown>;
+}
+
+export interface AgentLoopResult<TResult = AgentFinalResult> {
+  result?: TResult;
   raw: string;
 }
 
-export interface AgentLoopOptions {
+export interface AgentLoopOptions<TResult = AgentFinalResult> {
   maxRounds: number;
   maxTokensPerReview: number;
+  parseResponse?: (text: string) => AgentResponse<TResult>;
+  finalExample?: string;
 }
 
 export function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-function extractJsonObject(text: string): unknown {
+export function extractJsonObject(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
   const candidate = fenced ? fenced[1].trim() : trimmed;
@@ -50,10 +58,21 @@ function extractJsonObject(text: string): unknown {
   }
 }
 
-export type AgentResponse =
-  | { type: "tool_call"; tool: string; args: Record<string, unknown> }
-  | { type: "final"; result: AgentFinalResult }
+export type AgentResponse<TResult = AgentFinalResult> =
+  | ToolCallResponse
+  | { type: "final"; result: TResult }
   | undefined;
+
+export function parseToolCall(obj: Record<string, unknown>): ToolCallResponse | undefined {
+  if (obj.type === "tool_call" && typeof obj.tool === "string") {
+    return {
+      type: "tool_call",
+      tool: obj.tool,
+      args: obj.args && typeof obj.args === "object" ? (obj.args as Record<string, unknown>) : {}
+    };
+  }
+  return undefined;
+}
 
 export function parseAgentResponse(text: string): AgentResponse {
   const parsed = extractJsonObject(text);
@@ -93,15 +112,7 @@ export function parseAgentResponse(text: string): AgentResponse {
     };
   }
 
-  if (obj.type === "tool_call" && typeof obj.tool === "string") {
-    return {
-      type: "tool_call",
-      tool: obj.tool,
-      args: obj.args && typeof obj.args === "object" ? (obj.args as Record<string, unknown>) : {}
-    };
-  }
-
-  return undefined;
+  return parseToolCall(obj);
 }
 
 const noteIdKeys = ["findingId", "finding_id", "findingID", "id", "finding-id"] as const;
@@ -127,7 +138,8 @@ function normalizeNote(raw: unknown): AgentNote | undefined {
 export function buildAgentPrompt(
   systemPrompt: string,
   tools: ToolDefinition[],
-  history: string[]
+  history: string[],
+  finalExample?: string
 ): string {
   const toolList = tools.map((tool) => `- ${tool.name}: ${tool.description}`).join("\n");
   return [
@@ -140,7 +152,7 @@ export function buildAgentPrompt(
     ...history.map((entry, i) => `[${i + 1}]\n${entry}`),
     "",
     "RESPOND WITH A SINGLE JSON OBJECT:",
-    '{"type":"tool_call","tool":"<name>","args":{...}}  or  {"type":"final","summary":"...","notes":[...],"newFindings":[...]}',
+    finalExample ?? '{"type":"tool_call","tool":"<name>","args":{...}}  or  {"type":"final","summary":"...","notes":[...],"newFindings":[...]}',
     "Respond with only the JSON object, no surrounding text."
   ].join("\n");
 }
@@ -155,34 +167,37 @@ function buildPromptWithinBudget(
   systemPrompt: string,
   tools: ToolDefinition[],
   history: string[],
-  budget: number
+  budget: number,
+  finalExample?: string
 ): string {
   let pruned = [...history];
-  while (pruned.length > 1 && estimateTokens(buildAgentPrompt(systemPrompt, tools, pruned)) > budget) {
+  while (pruned.length > 1 && estimateTokens(buildAgentPrompt(systemPrompt, tools, pruned, finalExample)) > budget) {
     const idx = pruned.findIndex((entry) => entry.startsWith("<tool_result>"));
     if (idx === -1) {
       break;
     }
     pruned = pruned.slice(0, idx).concat(pruned.slice(idx + 1));
   }
-  return buildAgentPrompt(systemPrompt, tools, pruned);
+  return buildAgentPrompt(systemPrompt, tools, pruned, finalExample);
 }
 
-export async function runAgentLoop(
+export async function runAgentLoop<TResult = AgentFinalResult>(
   config: AiProviderConfig,
   systemPrompt: string,
   initialPrompt: string,
   tools: ToolDefinition[],
   ctx: ReviewToolContext,
-  options: AgentLoopOptions,
+  options: AgentLoopOptions<TResult>,
   fetchImpl?: FetchLike
-): Promise<AgentLoopResult> {
+): Promise<AgentLoopResult<TResult>> {
+  const parseResponse =
+    options.parseResponse ?? (parseAgentResponse as (text: string) => AgentResponse<TResult>);
   const history: string[] = [initialPrompt];
   let budget = resolveTokenBudget(config, options.maxTokensPerReview);
   let raw = "";
 
   for (let round = 0; round < options.maxRounds; round += 1) {
-    const prompt = buildPromptWithinBudget(systemPrompt, tools, history, budget);
+    const prompt = buildPromptWithinBudget(systemPrompt, tools, history, budget, options.finalExample);
     budget -= estimateTokens(prompt);
     if (budget <= 0) {
       break;
@@ -190,7 +205,7 @@ export async function runAgentLoop(
 
     const response = await requestProviderCompletion(config, prompt, fetchImpl);
     raw = response;
-    const parsed = parseAgentResponse(response);
+    const parsed = parseResponse(response);
 
     if (parsed?.type === "final") {
       return { result: parsed.result, raw: response };
