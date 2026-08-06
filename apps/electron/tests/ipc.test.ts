@@ -135,3 +135,16 @@ describe("main window lifecycle", () => {
     expect(source).toContain('findingReview: (payload) => invoke("finding:review", payload)');
   });
 });
+
+describe("renderer findings layout", () => {
+  it("lets the findings list track the window height and scroll internally", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/main\s*{[^}]*height:\s*100vh/s);
+    expect(source).toMatch(/main\s*{[^}]*overflow:\s*hidden/s);
+    expect(source).toMatch(/\.findings\s*{[^}]*flex:\s*1/s);
+    expect(source).toMatch(/\.findings\s*{[^}]*min-height:\s*0/s);
+    expect(source).toMatch(/\.findings\s*{[^}]*overflow:\s*auto/s);
+    expect(source).not.toContain("max-height: 55vh");
+  });
+});
