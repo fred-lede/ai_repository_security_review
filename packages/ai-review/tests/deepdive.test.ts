@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDeepDivePrompt, parseDeepDiveResponse } from "../src/deepdive.js";
+import { buildDeepDivePrompt, buildDeepDiveSystemPrompt, parseDeepDiveResponse } from "../src/deepdive.js";
 import type { AiProviderConfig } from "../src/types.js";
 import type { AuditReport, Finding } from "@repo-auditor/scanner-core";
 
@@ -83,6 +83,8 @@ describe("parseDeepDiveResponse", () => {
     expect(pick(JSON.stringify({ type: "final", verdict: "true" }))).toBe("real");
     expect(pick(JSON.stringify({ type: "final", verdict: "false" }))).toBe("false-positive");
     expect(pick(JSON.stringify({ type: "final", verdict: "not-an-issue" }))).toBe("false-positive");
+    expect(pick(JSON.stringify({ type: "final", verdict: "false_positive" }))).toBe("false-positive");
+    expect(pick(JSON.stringify({ type: "final", verdict: "false positive" }))).toBe("false-positive");
     expect(pick(JSON.stringify({ type: "final", verdict: "maybe" }))).toBe("uncertain");
     expect(pick(JSON.stringify({ type: "final" }))).toBe("uncertain");
   });
@@ -94,6 +96,15 @@ describe("parseDeepDiveResponse", () => {
     if (parsed?.type === "final") {
       expect(parsed.result.analysis).toBe("deeper detail");
       expect(parsed.result.correctedCode).toBe("git diff content");
+    }
+  });
+
+  it("falls through to a valid alias when the primary fixSteps key is invalid", () => {
+    const parsed = parseDeepDiveResponse(
+      JSON.stringify({ type: "final", verdict: "real", fixSteps: 3, recommendations: ["good step"] })
+    );
+    if (parsed?.type === "final") {
+      expect(parsed.result.fixSteps).toEqual(["good step"]);
     }
   });
 
@@ -132,5 +143,27 @@ describe("buildDeepDivePrompt", () => {
     const prompt = buildDeepDivePrompt(finding, report, { ...config, dataSharingMode: "finding-snippets" });
     expect(prompt).toContain("[REDACTED_TELEGRAM_TOKEN]");
     expect(prompt).not.toContain("ABCdefSecretValue");
+  });
+
+  it("does not instruct reading source code in metadata-only mode", () => {
+    const prompt = buildDeepDivePrompt(finding, report, { ...config, dataSharingMode: "metadata-only" });
+    expect(prompt).not.toContain("available tools");
+  });
+
+  it("instructs reading source code when tools are available", () => {
+    const prompt = buildDeepDivePrompt(finding, report, { ...config, dataSharingMode: "full-files" });
+    expect(prompt).toContain("Read the actual source code with the available tools");
+  });
+});
+
+describe("buildDeepDiveSystemPrompt", () => {
+  it("disables tools in metadata-only mode", () => {
+    const prompt = buildDeepDiveSystemPrompt({ ...config, dataSharingMode: "metadata-only" });
+    expect(prompt).toContain("No tools are available");
+  });
+
+  it("instructs reading and searching code when tools are available", () => {
+    const prompt = buildDeepDiveSystemPrompt({ ...config, dataSharingMode: "full-files" });
+    expect(prompt).toContain("Read files and search code");
   });
 });

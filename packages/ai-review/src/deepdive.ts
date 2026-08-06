@@ -33,7 +33,7 @@ function normalizeVerdict(value: unknown): DeepDiveVerdict {
   if (["real", "vulnerable", "true", "confirmed"].includes(v)) {
     return "real";
   }
-  if (["false-positive", "false", "benign", "not-an-issue"].includes(v)) {
+  if (["false-positive", "false", "benign", "not-an-issue", "false_positive", "false positive"].includes(v)) {
     return "false-positive";
   }
   return "uncertain";
@@ -66,7 +66,7 @@ export function parseDeepDiveResponse(text: string): AgentResponse<DeepDiveResul
     const analysis =
       ["analysis", "detail", "explanation"].map((key) => obj[key]).find((value) => typeof value === "string") ?? "";
     const fixSteps =
-      ["fixSteps", "steps", "recommendations"].map((key) => obj[key]).find((value) => value !== undefined) ?? [];
+      ["fixSteps", "steps", "recommendations"].map((key) => obj[key]).find((value) => Array.isArray(value) || typeof value === "string") ?? [];
     const correctedCode =
       ["correctedCode", "code", "patch"].map((key) => obj[key]).find((value) => typeof value === "string") ?? "";
     return {
@@ -107,9 +107,13 @@ export function buildDeepDivePrompt(finding: Finding, report: AuditReport, confi
   const range =
     finding.lineEnd > finding.lineStart ? `${finding.lineStart}-${finding.lineEnd}` : String(finding.lineStart);
   const findingJson = JSON.stringify(serializeFindingForPrompt(finding, config), null, 2);
+  const readGuidance =
+    config.dataSharingMode === "metadata-only"
+      ? "Base your verdict only on the provided finding metadata."
+      : "Read the actual source code with the available tools to verify the evidence before concluding.";
   const prompt = [
     "You are analyzing a single deterministic security finding in depth.",
-    "Read the actual source code with the available tools to verify the evidence before concluding.",
+    readGuidance,
     `Finding is at ${finding.filePath}:${range}.`,
     "Decide the verdict based on verified evidence. If the finding is real, provide concrete step-by-step fix steps and a corrected code snippet.",
     langInstruction[lang] ?? langInstruction["zh-TW"],
