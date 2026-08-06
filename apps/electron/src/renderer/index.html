@@ -1327,7 +1327,10 @@
                 };
                 const verdictColors = { real: "#d1242f", "false-positive": "#2da44e", uncertain: "#6c757d" };
                 const verdictEl = document.createElement("p");
-                verdictEl.innerHTML = `<strong style="color:${verdictColors[result.verdict] || "#6c757d"}">${verdictLabels[result.verdict] || result.verdict}</strong>`;
+                const strong = document.createElement("strong");
+                strong.style.color = verdictColors[result.verdict] || "#6c757d";
+                strong.textContent = verdictLabels[result.verdict] || result.verdict;
+                verdictEl.appendChild(strong);
                 out.appendChild(verdictEl);
                 const analysisEl = document.createElement("p");
                 analysisEl.textContent = result.analysis;

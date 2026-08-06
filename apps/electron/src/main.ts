@@ -239,16 +239,20 @@ ipcMain.handle("finding:review", async (_event, payload: FindingReviewPayload) =
   if (!finding || typeof finding.id !== "string" || typeof finding.filePath !== "string") {
     return { error: "A valid finding is required" };
   }
+  const report = payload?.report;
+  if (!report || !report.target || typeof report.target.localPath !== "string") {
+    return { error: "A valid report is required" };
+  }
   const { runDeepDive } = await import("@repo-auditor/ai-review");
   const provider = {
-    ...payload.provider,
-    language: payload.language ?? payload.provider.language ?? "zh-TW",
+    ...(payload.provider ?? {}),
+    language: payload.language ?? payload.provider?.language ?? "zh-TW",
     redactionEnabled: true,
     timeoutMs: 120000,
     retryLimit: 1
   };
-  return runDeepDive(finding, payload.report, provider, {
-    scanPath: payload.report.target.localPath ?? undefined
+  return runDeepDive(finding, report, provider, {
+    scanPath: report.target.localPath ?? undefined
   });
 });
 
