@@ -258,7 +258,21 @@ const explanationTranslations: Record<Language, Record<string, string>> = {
     "The project communicates with an external endpoint. Confirm this behavior is expected.":
       "The project communicates with an external endpoint. Confirm this behavior is expected.",
     "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
-      "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code."
+      "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.",
+    "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.":
+      "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.",
+    "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.":
+      "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.",
+    "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.":
+      "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.",
+    "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.":
+      "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.",
+    "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.":
+      "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.",
+    "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).":
+      "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).",
+    "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination.":
+      "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination."
   },
   "zh-TW": {
     "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.":
@@ -272,7 +286,21 @@ const explanationTranslations: Record<Language, Record<string, string>> = {
     "The project communicates with an external endpoint. Confirm this behavior is expected.":
       "專案會與外部端點通訊。請確認此行為是否符合預期。",
     "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
-      "專案在測試、fixture、localhost 或範例情境中引用端點。請確認它不會被正式環境程式碼使用。"
+      "專案在測試、fixture、localhost 或範例情境中引用端點。請確認它不會被正式環境程式碼使用。",
+    "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.":
+      "程式碼建立了反向或綁定 shell，讓攻擊者可互動式遠端存取本機。",
+    "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.":
+      "HTTP 用戶端以非字面值 URL 呼叫。若可被使用者控制，將成為可存取內部資源的 SSRF。",
+    "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.":
+      "程式碼執行網路偵察（connect_ex、nmap 或 masscan）。這可能表示掃描或橫向移動。",
+    "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.":
+      "程式碼讀取密碼欄位、localStorage 或 cookie。若加上對外傳輸，即為憑證竊取。",
+    "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.":
+      "程式碼註冊鍵盤監聽器或鉤子 API 以擷取按鍵輸入，這是釣魚/鍵盤側錄惡意軟體的特徵。",
+    "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).":
+      "程式碼透過外洩通道（webhook、編碼串流、非 HTTP 連線或檔案上傳）傳送資料。",
+    "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination.":
+      "專案包含敏感來源（環境變數、檔案系統讀取或命令執行）以及對外資料外洩 sink。這是可能的資料外洩候選 — 請審查敏感資料是否可能流向此目的地。"
   },
   "zh-CN": {
     "The package defines a postinstall lifecycle script. Lifecycle scripts run during installation and can execute code before review.":
@@ -286,7 +314,21 @@ const explanationTranslations: Record<Language, Record<string, string>> = {
     "The project communicates with an external endpoint. Confirm this behavior is expected.":
       "项目会与外部端点通信。请确认此行为是否符合预期。",
     "The project references an endpoint in a test, fixture, localhost, or example context. Confirm it cannot be used by production code.":
-      "项目在测试、fixture、localhost 或示例情境中引用端点。请确认它不会被正式环境代码使用。"
+      "项目在测试、fixture、localhost 或示例情境中引用端点。请确认它不会被正式环境代码使用。",
+    "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.":
+      "代码建立了反向或绑定 shell，让攻击者可以交互式远程访问本机。",
+    "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.":
+      "HTTP 客户端以非字面值 URL 调用。若可被用户控制，将成为可访问内部资源的 SSRF。",
+    "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.":
+      "代码执行网络侦察（connect_ex、nmap 或 masscan）。这可能表示扫描或横向移动。",
+    "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.":
+      "代码读取密码字段、localStorage 或 cookie。若加上对外传输，即为凭证窃取。",
+    "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.":
+      "代码注册键盘监听器或钩子 API 以截取按键输入，这是钓鱼/键盘侧录恶意软件的特征。",
+    "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).":
+      "代码通过外泄通道（webhook、编码串流、非 HTTP 连接或文件上传）发送数据。",
+    "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination.":
+      "项目包含敏感来源（环境变量、文件系统读取或命令执行）以及对外数据外泄 sink。这是可能的数据外泄候选 — 请审查敏感数据是否可能流向此目的地。"
   }
 };
 
@@ -301,7 +343,21 @@ const recommendedFixTranslations: Record<Language, Record<string, string>> = {
     "Document expected endpoints, minimize payloads, and require explicit consent before sending sensitive data.":
       "Document expected endpoints, minimize payloads, and require explicit consent before sending sensitive data.",
     "Keep test/example endpoints out of production configuration and ensure they cannot be selected at runtime.":
-      "Keep test/example endpoints out of production configuration and ensure they cannot be selected at runtime."
+      "Keep test/example endpoints out of production configuration and ensure they cannot be selected at runtime.",
+    "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.":
+      "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.",
+    "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.":
+      "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.",
+    "Remove scanning utilities unless this is an authorized security tool with documented scope.":
+      "Remove scanning utilities unless this is an authorized security tool with documented scope.",
+    "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.":
+      "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.",
+    "Remove keystroke capture unless it is an explicitly documented accessibility feature.":
+      "Remove keystroke capture unless it is an explicitly documented accessibility feature.",
+    "Remove unauthorized outbound channels and route data only through approved, audited endpoints.":
+      "Remove unauthorized outbound channels and route data only through approved, audited endpoints.",
+    "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code.":
+      "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code."
   },
   "zh-TW": {
     "Remove install-time side effects or move setup behind an explicit user command.":
@@ -313,7 +369,21 @@ const recommendedFixTranslations: Record<Language, Record<string, string>> = {
     "Document expected endpoints, minimize payloads, and require explicit consent before sending sensitive data.":
       "記錄預期端點、最小化傳送內容，並在送出敏感資料前要求明確同意。",
     "Keep test/example endpoints out of production configuration and ensure they cannot be selected at runtime.":
-      "避免將測試或範例端點放入正式環境設定，並確認執行期間無法選用這些端點。"
+      "避免將測試或範例端點放入正式環境設定，並確認執行期間無法選用這些端點。",
+    "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.":
+      "移除 shell 後門程式碼並終止所有作用中的連線；調查此程式碼如何被引入。",
+    "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.":
+      "驗證並白名單化目標 URL；切勿將未處理的使用者輸入傳給 HTTP 用戶端。",
+    "Remove scanning utilities unless this is an authorized security tool with documented scope.":
+      "移除掃描工具，除非這是有文件記錄範圍的授權安全工具。",
+    "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.":
+      "移除憑證收集；若為合法用途，請將憑證保留在伺服器端 session 內，且切勿傳送給第三方。",
+    "Remove keystroke capture unless it is an explicitly documented accessibility feature.":
+      "移除按鍵擷取功能，除非這是有明確文件記錄的無障礙功能。",
+    "Remove unauthorized outbound channels and route data only through approved, audited endpoints.":
+      "移除未授權的對外通道，僅透過經過核准與稽核的端點傳送資料。",
+    "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code.":
+      "移除未授權的對外通道，或將敏感資料與可存取網路的程式碼隔離。"
   },
   "zh-CN": {
     "Remove install-time side effects or move setup behind an explicit user command.":
@@ -325,7 +395,21 @@ const recommendedFixTranslations: Record<Language, Record<string, string>> = {
     "Document expected endpoints, minimize payloads, and require explicit consent before sending sensitive data.":
       "记录预期端点、最小化发送内容，并在发送敏感数据前要求明确同意。",
     "Keep test/example endpoints out of production configuration and ensure they cannot be selected at runtime.":
-      "避免将测试或示例端点放入正式环境设置，并确认运行期间无法选用这些端点。"
+      "避免将测试或示例端点放入正式环境设置，并确认运行期间无法选用这些端点。",
+    "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.":
+      "移除 shell 后门代码并终止所有活动中的连接；调查此代码是如何被引入的。",
+    "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.":
+      "验证并白名单化目标 URL；切勿将未处理的用户输入传给 HTTP 客户端。",
+    "Remove scanning utilities unless this is an authorized security tool with documented scope.":
+      "移除扫描工具，除非这是有文档记录范围的授权安全工具。",
+    "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.":
+      "移除凭证收集；若为合法用途，请将凭证保留在服务器端 session 内，切勿发送给第三方。",
+    "Remove keystroke capture unless it is an explicitly documented accessibility feature.":
+      "移除按键截取功能，除非这是有明确文档记录的无障碍功能。",
+    "Remove unauthorized outbound channels and route data only through approved, audited endpoints.":
+      "移除未授权的对外通道，仅通过经过核准与审计的端点发送数据。",
+    "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code.":
+      "移除未授权的对外通道，或将敏感数据与可访问网络的代码隔离。"
   }
 };
 
