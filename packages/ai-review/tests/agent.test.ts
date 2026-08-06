@@ -236,9 +236,16 @@ describe("custom final schema via parseResponse + finalExample", () => {
   });
 
   it("returns a custom-shaped final result from a custom parser", async () => {
-    const fetchImpl = jsonCompletion(
+    const completion = jsonCompletion(
       JSON.stringify({ type: "final", verdict: "real", analysis: "confirmed", fixSteps: [], correctedCode: "" })
     );
+    let sentPrompt = "";
+    const fetchImpl = vi.fn(async (...args: unknown[]) => {
+      const body = args[1] as { body?: string } | undefined;
+      const payload = JSON.parse(body?.body ?? "{}") as { messages?: Array<{ content?: string }> };
+      sentPrompt = payload.messages?.[0]?.content ?? "";
+      return completion();
+    });
     const result = await runAgentLoop(
       config,
       "system",
@@ -259,6 +266,8 @@ describe("custom final schema via parseResponse + finalExample", () => {
       },
       fetchImpl
     );
+    expect(sentPrompt).toContain('"verdict"');
+    expect(sentPrompt).not.toContain('"newFindings"');
     expect(result.result).toEqual({ verdict: "real" });
   });
 });

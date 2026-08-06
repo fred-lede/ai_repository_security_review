@@ -190,6 +190,7 @@ export async function runAgentLoop<TResult = AgentFinalResult>(
   options: AgentLoopOptions<TResult>,
   fetchImpl?: FetchLike
 ): Promise<AgentLoopResult<TResult>> {
+  // The default parser only produces AgentFinalResult; custom schemas MUST supply parseResponse.
   const parseResponse =
     options.parseResponse ?? (parseAgentResponse as (text: string) => AgentResponse<TResult>);
   const history: string[] = [initialPrompt];
