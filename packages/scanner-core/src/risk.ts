@@ -10,7 +10,9 @@ const blockingCategories: FindingCategory[] = [
   "remote-code-execution",
   "persistence",
   "postinstall-script",
-  "github-actions"
+  "github-actions",
+  "phishing",
+  "network-attack"
 ];
 
 export function assessRisk(findings: Finding[], lang: Language = "zh-TW"): RiskAssessment {
@@ -31,10 +33,11 @@ export function assessRisk(findings: Finding[], lang: Language = "zh-TW"): RiskA
 
   const blocking = findings.filter(
     (finding) =>
-      finding.riskLevel === "Critical" ||
+      finding.source !== "ai" &&
+      (finding.riskLevel === "Critical" ||
       (finding.riskLevel === "High" &&
         finding.confidence === "High" &&
-        (blockingCategories.includes(finding.category) || finding.evidenceTags.includes("exfiltration-candidate")))
+        (blockingCategories.includes(finding.category) || finding.evidenceTags.includes("exfiltration-candidate"))))
   );
   const overallRiskLevel = riskOrder.find((risk) => severityCounts[risk] > 0) ?? "Info";
   const decision: Decision =

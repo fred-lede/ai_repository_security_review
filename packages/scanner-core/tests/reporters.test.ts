@@ -378,6 +378,63 @@ describe("reporters", () => {
 
     expect(risk.topRisks).toEqual(["Critical: critical risk", "High: high risk", "Medium: medium risk"]);
   });
+
+  it("blocks on high-confidence phishing and network-attack findings", () => {
+    const risk = assessRisk([
+      {
+        id: "finding-1",
+        riskLevel: "High",
+        category: "phishing",
+        filePath: "phish.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "credential harvest",
+        explanation: "credential harvesting",
+        recommendedFix: "remove",
+        evidenceTags: ["phishing", "credential-harvesting"],
+        confidence: "High"
+      },
+      {
+        id: "finding-2",
+        riskLevel: "High",
+        category: "network-attack",
+        filePath: "pwn.sh",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "reverse shell",
+        explanation: "reverse shell",
+        recommendedFix: "remove",
+        evidenceTags: ["reverse-shell"],
+        confidence: "High"
+      }
+    ]);
+
+    expect(risk.decision).toBe("Block");
+    expect(risk.blockingFindingIds).toContain("finding-1");
+    expect(risk.blockingFindingIds).toContain("finding-2");
+  });
+
+  it("does not let AI-sourced findings trigger Block", () => {
+    const risk = assessRisk([
+      {
+        id: "finding-1",
+        riskLevel: "High",
+        category: "phishing",
+        filePath: "phish.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "credential harvest",
+        explanation: "ai-reported credential harvesting",
+        recommendedFix: "remove",
+        evidenceTags: ["phishing", "credential-harvesting"],
+        source: "ai",
+        confidence: "High"
+      }
+    ]);
+
+    expect(risk.decision).toBe("Needs Review");
+    expect(risk.blockingFindingIds).not.toContain("finding-1");
+  });
 });
 
 function makeFinding(overrides: Partial<Finding> = {}): Finding {
