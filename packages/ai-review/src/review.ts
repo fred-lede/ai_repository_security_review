@@ -336,7 +336,7 @@ function findingNotesTranslator(lang: string) {
   };
 }
 
-function serializeFindingForPrompt(finding: Finding, config: AiProviderConfig) {
+export function serializeFindingForPrompt(finding: Finding, config: AiProviderConfig) {
   return {
     id: finding.id,
     riskLevel: finding.riskLevel,
