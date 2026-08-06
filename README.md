@@ -12,6 +12,7 @@ npm run dev:cli -- scan ./fixtures/malicious-package
 
 - **Multi-target scanning** — Local directories, files, archives, GitHub repositories (cloned on-the-fly)
 - **~30 built-in detection rules** — Postinstall scripts, unpinned dependencies, command injection, network exfiltration, credential leakage, persistence mechanisms, Electron IPC risks, GitHub Actions abuse
+- **Threat-family detection** — Dedicated signals for phishing (credential harvesting, keyloggers, bulk email), network attacks (reverse/bind shells, SSRF, port scanning), and data exfiltration (webhooks, encoded channels, non-HTTP/file-upload sinks), including cross-file source→sink correlation
 - **Data flow graph** — Traces sensitive sources (env vars, filesystem) through processes to external sinks
 - **Risk assessment** — Block/Needs Review/Monitor/Pass decisions with residual risk analysis, trust score, risk matrix, and attack surface summary
 - **6 output formats** — Markdown (readable report), JSON (full data), Mermaid (flowchart), SARIF (IDE integration), HTML (styled report), PDF (A4 print via Electron)
@@ -119,6 +120,7 @@ npm run package:all    # All three platforms
 │   ├── scanner-core/        # Scanning engine
 │   │   ├── src/rules.ts       # Rule engine (built-in + custom)
 │   │   ├── src/inventory.ts   # Project inventory builder
+│   │   ├── src/threatPatterns.ts # Threat-family signals (phishing/network/exfil)
 │   │   ├── src/dataFlow.ts    # Data flow graph
 │   │   ├── src/risk.ts        # Risk assessment
 │   │   ├── src/reporters.ts   # Output renders (md/html/json/mermaid/sarif)
@@ -127,7 +129,9 @@ npm run package:all    # All three platforms
 │   │   ├── src/defaultRules.ts# Built-in detection rules
 │   │   └── src/i18n.ts        # Translation tables (en/zh-TW/zh-CN)
 │   ├── ai-review/           # AI-powered review layer
-│   │   └── src/review.ts      # Prompt builder + provider integration
+│   │   ├── src/review.ts      # Prompt builder + provider integration
+│   │   ├── src/agent.ts       # Multi-round tool-using agent loop
+│   │   └── src/providers.ts   # Provider request/response handling
 │   └── cli/                 # Command-line interface
 ├── fixtures/
 │   ├── malicious-package/   # Suspicious test fixture
@@ -149,6 +153,12 @@ npm run package:all    # All three platforms
 | Unpinned dependency | `supply-chain` | Git/HTTP/tarball/file dependency sources |
 | Command execution | `command-injection` | Shell/process execution via exec/spawn/execFile |
 | Network analysis | `network` | Outbound endpoints near sensitive sources (exfiltration candidates) |
+| Reverse shell | `network-attack` | `/dev/tcp`, `bash -i >&`, `nc -e`, bind shells (`nc -lp`, `socat TCP-LISTEN`) |
+| SSRF sink | `network-attack` | `requests.get(var)`, `urlopen(var)`, `fetch(var)`, axios with non-literal arguments |
+| Port scan | `network-attack` | `connect_ex`, nmap, masscan |
+| Credential harvesting | `phishing` | Password inputs + outbound send, `getElementById('password')`, cookie/storage reads |
+| Keylogger | `phishing` | `keydown` listeners + send, pynput |
+| Exfiltration sink | `data-exfiltration` | Webhooks (Discord/Telegram/Slack), base64/btoa encoded channels, `nc`/`socat`/`scp`/FTP/S3, `curl -d @file` — correlated with sensitive sources across files |
 
 ### Custom Rules
 
@@ -174,7 +184,7 @@ Rules are declarative JSON. Create a `repo-auditor-rules.json` in the app data d
 
 Supported condition operators: `equals`, `contains`, `matches` (regex), `in`, `not_in`.
 
-## Finding Categories (15)
+## Finding Categories (17)
 
 | Category | Risk |
 |----------|------|
@@ -185,6 +195,8 @@ Supported condition operators: `equals`, `contains`, `matches` (regex), `in`, `n
 | `persistence` | Blocking |
 | `postinstall-script` | Blocking |
 | `github-actions` | Blocking |
+| `phishing` | Blocking |
+| `network-attack` | Blocking |
 | `hidden-telemetry` | Informational |
 | `tracking` | Informational |
 | `supply-chain` | Informational |
@@ -220,6 +232,8 @@ Data-sharing modes control how much context is sent:
 - `metadata-only` — Finding IDs and categories only (no code)
 - `finding-snippets` — With code snippets (secrets redacted)
 - `full-files` — Full source files
+
+The agent reviews findings in per-category batches, using `file_read`/`file_find`/`code_search` tools to verify each one. It may also add new findings for the three threat families (phishing, network attack, data exfiltration) — these are marked as AI-sourced, capped at `Medium` risk with `Low` confidence, and never trigger an automatic Block. Context-window budgeting keeps prompts within the provider's limits (default 128k for cloud, 32k for Ollama), and an overall review deadline (default 10 minutes) aborts remaining batches and returns partial results with a truncation flag instead of failing.
 
 Secret redaction automatically masks:
 - Telegram bot tokens

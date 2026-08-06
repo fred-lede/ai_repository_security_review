@@ -178,6 +178,7 @@ Track 1:
 - `packages/scanner-core/src/risk.ts` — blocking categories + `source === "ai"` exclusion
 - `packages/scanner-core/src/i18n.ts` — category labels + rule strings (3 languages)
 - `packages/scanner-core/src/index.ts` — export new module/types
+- `README.md` — detection-rules table, finding-categories count/table (15→17), AI review section (new-finding capability, context window, batch progress)
 - tests: `tests/threatPatterns.test.ts` (new), `tests/rules.test.ts`, `tests/risk.test.ts`
 
 Track 2:
