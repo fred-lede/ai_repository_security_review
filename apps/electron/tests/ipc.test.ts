@@ -120,4 +120,12 @@ describe("main window lifecycle", () => {
     expect(source).toContain("runDeepDive(");
     expect(source).toContain("scanPath: payload.report.target.localPath ?? undefined");
   });
+
+  it("adds per-finding deep-dive controls to the renderer", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toContain("window.repoAuditor.findingReview");
+    expect(source).toContain('t("aiDeepDive")');
+    expect(source).toContain("aiVerdictReal");
+  });
 });

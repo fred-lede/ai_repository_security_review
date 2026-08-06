@@ -200,6 +200,8 @@
       .line-num { color: #6c757d; display: inline-block; min-width: 3ch; text-align: right; margin-right: 1em; user-select: none; }
       .line-highlight { background: #fff3cd; }
       .finding-fix { margin: 4px 0; }
+      .finding-dive { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d0d7de; }
+      .finding-dive h4 { margin: 8px 0 4px; }
 
       .muted {
         color: #667586;
@@ -583,6 +585,16 @@
           exportFailed: "Export failed",
           noScanToExport: "Run a scan first before exporting",
           aiBatchProgress: "AI batch %done% of %total% done",
+          aiDeepDive: "AI Deep-Dive",
+          aiDeepDiveReviewing: "Deep-diving...",
+          aiDeepDiveFailed: "Deep-dive failed",
+          aiDeepDiveTruncated: "The provider was interrupted; showing the raw response.",
+          aiVerdictReal: "Real vulnerability",
+          aiVerdictFalsePositive: "False positive",
+          aiVerdictUncertain: "Cannot determine",
+          aiAnalysis: "Analysis",
+          aiFixSteps: "Fix steps",
+          aiCorrectedCode: "Corrected code",
           aiReviewResult: "AI Review Result",
           aiModel: "Model",
           aiReviewedAt: "Reviewed at",
@@ -646,6 +658,16 @@
           exportFailed: "匯出失敗",
           noScanToExport: "請先執行掃描再匯出",
           aiBatchProgress: "AI 批次 %done% / %total% 完成",
+          aiDeepDive: "AI 深入分析",
+          aiDeepDiveReviewing: "深入分析中...",
+          aiDeepDiveFailed: "深入分析失敗",
+          aiDeepDiveTruncated: "提供者連線中斷；顯示原始回應。",
+          aiVerdictReal: "真實漏洞",
+          aiVerdictFalsePositive: "誤報",
+          aiVerdictUncertain: "無法確定",
+          aiAnalysis: "分析",
+          aiFixSteps: "修復步驟",
+          aiCorrectedCode: "修正程式碼",
           aiReviewResult: "AI 審查結果",
           aiModel: "模型",
           aiReviewedAt: "審查時間",
@@ -709,6 +731,16 @@
           exportFailed: "导出失败",
           noScanToExport: "请先执行扫描再导出",
           aiBatchProgress: "AI 批次 %done% / %total% 完成",
+          aiDeepDive: "AI 深入分析",
+          aiDeepDiveReviewing: "深入分析中...",
+          aiDeepDiveFailed: "深入分析失败",
+          aiDeepDiveTruncated: "提供商连接中断；显示原始响应。",
+          aiVerdictReal: "真实漏洞",
+          aiVerdictFalsePositive: "误报",
+          aiVerdictUncertain: "无法确定",
+          aiAnalysis: "分析",
+          aiFixSteps: "修复步骤",
+          aiCorrectedCode: "修正代码",
           aiReviewResult: "AI 审查结果",
           aiModel: "模型",
           aiReviewedAt: "审查时间",
@@ -1244,6 +1276,92 @@
               }
             });
             detail.appendChild(ctxBtn);
+
+            const diveBtn = document.createElement("button");
+            diveBtn.className = "secondary";
+            diveBtn.textContent = t("aiDeepDive");
+            diveBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              diveBtn.disabled = true;
+              diveBtn.textContent = t("aiDeepDiveReviewing");
+              const out = document.createElement("div");
+              out.className = "finding-dive";
+              detail.appendChild(out);
+              try {
+                const res = await window.repoAuditor.findingReview({
+                  finding,
+                  report: state.result.report,
+                  provider: {
+                    type: $("provider-type").value,
+                    baseUrl: $("provider-url").value,
+                    model: $("provider-model").value,
+                    apiKey: $("provider-api-key").value || undefined,
+                    dataSharingMode: $("sharing-mode").value,
+                    redactionEnabled: true,
+                    timeoutMs: 120000,
+                    retryLimit: 1
+                  },
+                  language: currentLang()
+                });
+                if (res.error) {
+                  out.className = "hint error finding-dive";
+                  out.textContent = `${t("aiDeepDiveFailed")}: ${res.error}`;
+                  return;
+                }
+                if (!res.result) {
+                  const note = document.createElement("p");
+                  note.className = "muted";
+                  note.textContent = res.truncated ? t("aiDeepDiveTruncated") : t("aiDeepDiveFailed");
+                  out.appendChild(note);
+                  const pre = document.createElement("pre");
+                  pre.className = "finding-patch";
+                  pre.textContent = res.raw || "-";
+                  out.appendChild(pre);
+                  return;
+                }
+                const result = res.result;
+                const verdictLabels = {
+                  real: t("aiVerdictReal"),
+                  "false-positive": t("aiVerdictFalsePositive"),
+                  uncertain: t("aiVerdictUncertain")
+                };
+                const verdictColors = { real: "#d1242f", "false-positive": "#2da44e", uncertain: "#6c757d" };
+                const verdictEl = document.createElement("p");
+                verdictEl.innerHTML = `<strong style="color:${verdictColors[result.verdict] || "#6c757d"}">${verdictLabels[result.verdict] || result.verdict}</strong>`;
+                out.appendChild(verdictEl);
+                const analysisEl = document.createElement("p");
+                analysisEl.textContent = result.analysis;
+                out.appendChild(analysisEl);
+                if (result.fixSteps.length > 0) {
+                  const h4 = document.createElement("h4");
+                  h4.textContent = t("aiFixSteps");
+                  out.appendChild(h4);
+                  const ol = document.createElement("ol");
+                  result.fixSteps.forEach((step) => {
+                    const li = document.createElement("li");
+                    li.textContent = step;
+                    ol.appendChild(li);
+                  });
+                  out.appendChild(ol);
+                }
+                if (result.correctedCode) {
+                  const h4 = document.createElement("h4");
+                  h4.textContent = t("aiCorrectedCode");
+                  out.appendChild(h4);
+                  const pre = document.createElement("pre");
+                  pre.className = "finding-patch";
+                  pre.textContent = result.correctedCode;
+                  out.appendChild(pre);
+                }
+              } catch (error) {
+                out.className = "hint error finding-dive";
+                out.textContent = `${t("aiDeepDiveFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
+              } finally {
+                diveBtn.disabled = false;
+                diveBtn.textContent = t("aiDeepDive");
+              }
+            });
+            detail.appendChild(diveBtn);
 
             el.appendChild(header);
             el.appendChild(detail);
