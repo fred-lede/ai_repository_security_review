@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { listScannableFiles } from "./fileWalker.js";
-import type { ScanCoverage } from "./types.js";
+import { collectThreatSignals } from "./threatPatterns.js";
+import type { ScanCoverage, ThreatSignal } from "./types.js";
 
 export interface PackageScript {
   name: string;
@@ -33,6 +34,7 @@ export interface ProjectInventory {
   electronIpcFiles: string[];
   persistenceIndicators: Array<{ filePath: string; line: number; snippet: string }>;
   dangerousCalls: DangerousCall[];
+  threatSignals: ThreatSignal[];
 }
 
 export type LanguageId = "python" | "javascript" | "go" | "java" | "shell" | "dockerfile" | "yaml";
@@ -179,7 +181,8 @@ export async function buildInventory(targetPath: string): Promise<ProjectInvento
     githubWorkflowFiles: [],
     electronIpcFiles: [],
     persistenceIndicators: [],
-    dangerousCalls: []
+    dangerousCalls: [],
+    threatSignals: []
   };
 
   for (const filePath of files) {
@@ -216,6 +219,7 @@ export async function buildInventory(targetPath: string): Promise<ProjectInvento
     }
 
     collectDangerousCalls(content, filePath, inventory);
+    inventory.threatSignals.push(...collectThreatSignals(content, filePath));
   }
 
   inventory.environmentVariables = unique(inventory.environmentVariables);

