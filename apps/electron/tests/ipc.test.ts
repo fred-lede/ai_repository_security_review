@@ -128,4 +128,10 @@ describe("main window lifecycle", () => {
     expect(source).toContain('t("aiDeepDive")');
     expect(source).toContain("aiVerdictReal");
   });
+
+  it("exposes findingReview on the runtime preload bridge", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/preload.cjs"), "utf8");
+
+    expect(source).toContain('findingReview: (payload) => invoke("finding:review", payload)');
+  });
 });

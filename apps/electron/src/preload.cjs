@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   reportRead: (payload) => invoke("report:read", payload),
   reportExport: (payload) => invoke("report:export", payload),
   aiReviewRun: (payload) => invoke("ai-review:run", payload),
+  findingReview: (payload) => invoke("finding:review", payload),
   aiModelsList: (payload) => invoke("ai-models:list", payload),
   aiConnectionTest: (payload) => invoke("ai-connection:test", payload),
   folderOpen: (payload) => invoke("folder:open", payload),
