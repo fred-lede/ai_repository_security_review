@@ -1,7 +1,9 @@
 import type { Finding, AuditReport } from "@repo-auditor/scanner-core";
-import { extractJsonObject, parseToolCall, type AgentResponse } from "./agent.js";
+import { extractJsonObject, parseToolCall, runAgentLoop, type AgentResponse } from "./agent.js";
+import type { FetchLike } from "./providers.js";
 import { serializeFindingForPrompt } from "./review.js";
 import { redactSecrets } from "./redaction.js";
+import { buildTools, type ReviewToolContext } from "./tools.js";
 import type { AiProviderConfig } from "./types.js";
 
 export type DeepDiveVerdict = "real" | "false-positive" | "uncertain";
@@ -123,4 +125,41 @@ export function buildDeepDivePrompt(finding: Finding, report: AuditReport, confi
   ].join("\n");
 
   return config.redactionEnabled ? redactSecrets(prompt) : prompt;
+}
+
+export async function runDeepDive(
+  finding: Finding,
+  report: AuditReport,
+  config: AiProviderConfig,
+  options: DeepDiveOptions = {},
+  fetchImpl?: FetchLike
+): Promise<DeepDiveRunResult> {
+  const scanPath = options.scanPath ?? report.target.localPath ?? "";
+  const mode: ReviewToolContext["mode"] = config.dataSharingMode === "full-files" ? "full-files" : "snippets";
+  const ctx: ReviewToolContext = {
+    scanPath,
+    mode,
+    allowedFiles: config.dataSharingMode === "finding-snippets" ? [finding.filePath] : undefined
+  };
+  const tools = buildTools(config.dataSharingMode, ctx);
+
+  try {
+    const loopResult = await runAgentLoop(
+      config,
+      buildDeepDiveSystemPrompt(config),
+      buildDeepDivePrompt(finding, report, config),
+      tools,
+      ctx,
+      {
+        maxRounds: options.maxRounds ?? 6,
+        maxTokensPerReview: options.maxTokensPerReview ?? 30_000,
+        parseResponse: parseDeepDiveResponse,
+        finalExample: DEEP_DIVE_FINAL_EXAMPLE
+      },
+      fetchImpl
+    );
+    return { result: loopResult.result, raw: loopResult.raw, truncated: false };
+  } catch {
+    return { result: undefined, raw: "", truncated: true };
+  }
 }
