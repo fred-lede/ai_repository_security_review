@@ -1,6 +1,6 @@
 import { assessRisk, buildAttackSurface } from "@repo-auditor/scanner-core";
 import type { AuditReport, Finding, Language } from "@repo-auditor/scanner-core";
-import { runAgentLoop, type AgentNote } from "./agent.js";
+import { runAgentLoop, type AgentLoopResult, type AgentNote } from "./agent.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
@@ -80,15 +80,21 @@ export async function runAiReview(
       break;
     }
 
-    const loopResult = await runAgentLoop(
-      config,
-      buildSystemPrompt(config),
-      buildBatchPrompt(report, batch, config, ctx),
-      tools,
-      ctx,
-      { maxRounds, maxTokensPerReview: budgetPerBatch },
-      fetchImpl
-    );
+    let loopResult: AgentLoopResult;
+    try {
+      loopResult = await runAgentLoop(
+        config,
+        buildSystemPrompt(config),
+        buildBatchPrompt(report, batch, config, ctx),
+        tools,
+        ctx,
+        { maxRounds, maxTokensPerReview: budgetPerBatch },
+        fetchImpl
+      );
+    } catch {
+      truncated = true;
+      break;
+    }
 
     if (loopResult.result) {
       summaries.push(loopResult.result.summary);

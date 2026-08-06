@@ -140,6 +140,24 @@ describe("batched agent review", () => {
     expect(calls.length).toBeGreaterThan(0);
   });
 
+  it("returns truncated partial results when a provider request is aborted instead of failing the review", async () => {
+    const aborted = Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+    const fetchImpl = vi.fn(async () => {
+      throw aborted;
+    });
+
+    const result = await runAiReview(
+      report,
+      config,
+      { scanPath: "fixture", maxFindingsPerBatch: 1, maxRounds: 1 },
+      fetchImpl
+    );
+
+    expect(result.truncated).toBe(true);
+    expect(result.summary).toContain("AI review configured");
+    expect(result.newFindings).toEqual([]);
+  });
+
   describe("normalizeAiFindings", () => {
   it("drops out-of-scope categories and caps risk at Medium with Low confidence and source ai", () => {
     const normalized = normalizeAiFindings([

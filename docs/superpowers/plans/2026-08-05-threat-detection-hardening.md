@@ -1323,6 +1323,8 @@ Declare `let truncated = false;` above the loop. Add `newFindings` to the return
 
 Note: `AbortController` is not wired to provider requests in this task (that requires plumbing the signal through `requestProviderCompletion`, which stays out of scope — the deadline check between batches bounds total time to ~`maxTotalMs + one request timeout`). Update the module-level comment accordingly.
 
+**Plan fix (follow-up commit):** a provider request failure (e.g. `AbortError` from a per-request timeout) previously threw out of the batch loop and failed the whole `ai-review:run` IPC call as "AI 審查失敗". The batch loop now wraps `runAgentLoop` in try/catch: on failure it sets `truncated = true` and stops, returning the partial results collected so far — matching the deadline-truncation behavior documented in the README.
+
 - [ ] **Step 6: Update `createOfflineAiReviewPlaceholder` return**
 
 The offline placeholder (line 192-...) must also return the new fields:
