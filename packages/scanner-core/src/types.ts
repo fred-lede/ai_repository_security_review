@@ -58,6 +58,17 @@ export type LanguageId =
   | "dockerfile"
   | "yaml";
 
+export type ThreatFamily = "phishing" | "network-attack" | "data-exfiltration";
+
+export interface ThreatSignal {
+  family: ThreatFamily;
+  pattern: string;
+  filePath: string;
+  line: number;
+  snippet: string;
+  evidenceTags: string[];
+}
+
 export interface LanguageCoverage {
   files: number;
   detections: number;

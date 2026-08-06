@@ -55,5 +55,7 @@ export type {
   RiskLevel,
   ScanCoverage,
   ScanOptions,
-  TargetType
+  TargetType,
+  ThreatFamily,
+  ThreatSignal
 } from "./types.js";
