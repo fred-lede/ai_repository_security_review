@@ -582,7 +582,20 @@
           exportSuccess: "Reports exported successfully",
           exportFailed: "Export failed",
           noScanToExport: "Run a scan first before exporting",
-          aiBatchProgress: "AI batch %done% of %total% done"
+          aiBatchProgress: "AI batch %done% of %total% done",
+          aiReviewResult: "AI Review Result",
+          aiModel: "Model",
+          aiReviewedAt: "Reviewed at",
+          aiStatus: "Status",
+          aiStatusComplete: "Complete",
+          aiStatusTruncated: "Truncated - some findings were not reviewed",
+          aiSummary: "Summary",
+          aiFindingsReview: "Findings Review",
+          aiDecision: "Decision",
+          aiFalsePositiveNote: "False positive note",
+          aiSaferPattern: "Safer pattern",
+          aiNewFindings: "New Findings by AI",
+          aiNone: "None"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -632,7 +645,20 @@
           exportSuccess: "報告匯出成功",
           exportFailed: "匯出失敗",
           noScanToExport: "請先執行掃描再匯出",
-          aiBatchProgress: "AI 批次 %done% / %total% 完成"
+          aiBatchProgress: "AI 批次 %done% / %total% 完成",
+          aiReviewResult: "AI 審查結果",
+          aiModel: "模型",
+          aiReviewedAt: "審查時間",
+          aiStatus: "狀態",
+          aiStatusComplete: "審查完成",
+          aiStatusTruncated: "已截斷 - 部分 finding 未審查",
+          aiSummary: "審查摘要",
+          aiFindingsReview: "逐項審查",
+          aiDecision: "判定",
+          aiFalsePositiveNote: "誤報說明",
+          aiSaferPattern: "更安全的做法",
+          aiNewFindings: "AI 新增發現",
+          aiNone: "無"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -682,7 +708,20 @@
           exportSuccess: "报告导出成功",
           exportFailed: "导出失败",
           noScanToExport: "请先执行扫描再导出",
-          aiBatchProgress: "AI 批次 %done% / %total% 完成"
+          aiBatchProgress: "AI 批次 %done% / %total% 完成",
+          aiReviewResult: "AI 审查结果",
+          aiModel: "模型",
+          aiReviewedAt: "审查时间",
+          aiStatus: "状态",
+          aiStatusComplete: "审查完成",
+          aiStatusTruncated: "已截断 - 部分发现项未审查",
+          aiSummary: "审查摘要",
+          aiFindingsReview: "逐项审查",
+          aiDecision: "判定",
+          aiFalsePositiveNote: "误报说明",
+          aiSaferPattern: "更安全的做法",
+          aiNewFindings: "AI 新增发现",
+          aiNone: "无"
         }
       };
 
@@ -976,7 +1015,7 @@
             renderResult(state.result);
           }
           $("preview").className = "";
-          $("preview").textContent = JSON.stringify(state.aiReview, null, 2);
+          $("preview").textContent = renderAiReviewText(state.aiReview, state.result.report);
         } catch (error) {
           $("preview").className = "hint error";
           $("preview").textContent = `${t("aiReviewFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
@@ -1218,6 +1257,46 @@
             return el;
           })
         );
+      }
+
+      function renderAiReviewText(aiReview, report) {
+        if (!aiReview) return "";
+        const lines = [];
+        lines.push(`## ${t("aiReviewResult")}`);
+        lines.push(`- ${t("aiModel")}: ${aiReview.model || "-"}`);
+        lines.push(`- ${t("aiReviewedAt")}: ${aiReview.generatedAt || "-"}`);
+        lines.push(`- ${t("aiStatus")}: ${aiReview.truncated ? t("aiStatusTruncated") : t("aiStatusComplete")}`);
+        lines.push("");
+        lines.push(`## ${t("aiSummary")}`);
+        lines.push(aiReview.summary || "-");
+        lines.push("");
+        lines.push(`## ${t("aiFindingsReview")}`);
+        const findingsById = new Map((report?.findings ?? []).map((finding) => [finding.id, finding]));
+        for (const note of aiReview.findingNotes ?? []) {
+          const finding = findingsById.get(note.findingId);
+          const header = finding
+            ? `${localizedRisk(finding.riskLevel)} ${localizedCategory(finding.category)} - ${finding.filePath}${finding.lineStart ? `:${finding.lineStart}` : ""}`
+            : note.findingId;
+          lines.push(`### ${header}`);
+          if (note.explanation) lines.push(`- ${t("aiDecision")}: ${note.explanation}`);
+          if (note.falsePositiveNote) lines.push(`- ${t("aiFalsePositiveNote")}: ${note.falsePositiveNote}`);
+          if (note.saferPattern) lines.push(`- ${t("aiSaferPattern")}: ${note.saferPattern}`);
+          lines.push("");
+        }
+        lines.push(`## ${t("aiNewFindings")}`);
+        const newFindings = aiReview.newFindings ?? [];
+        if (newFindings.length === 0) {
+          lines.push(t("aiNone"));
+        } else {
+          for (const finding of newFindings) {
+            lines.push(
+              `### ${localizedRisk(finding.riskLevel)} ${localizedCategory(finding.category)} - ${finding.filePath}:${finding.lineStart}-${finding.lineEnd}`
+            );
+            if (finding.explanation) lines.push(finding.explanation);
+            lines.push("");
+          }
+        }
+        return lines.join("\n").trim();
       }
 
       // === Rule Editor ===
