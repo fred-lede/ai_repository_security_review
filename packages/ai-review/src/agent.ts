@@ -65,7 +65,9 @@ export function parseAgentResponse(text: string): AgentResponse {
 
   if (obj.type === "final") {
     const notes = Array.isArray(obj.notes)
-      ? (obj.notes as AgentNote[]).filter((n) => n && typeof n.findingId === "string")
+      ? (obj.notes as Array<Record<string, unknown>>)
+          .map(normalizeNote)
+          .filter((n): n is AgentNote => Boolean(n))
       : [];
     const newFindings = Array.isArray(obj.newFindings)
       ? (obj.newFindings as AiNewFinding[]).filter(
@@ -100,6 +102,26 @@ export function parseAgentResponse(text: string): AgentResponse {
   }
 
   return undefined;
+}
+
+const noteIdKeys = ["findingId", "finding_id", "findingID", "id", "finding-id"] as const;
+
+function normalizeNote(raw: unknown): AgentNote | undefined {
+  if (!raw || typeof raw !== "object") {
+    return undefined;
+  }
+  const note = raw as Record<string, unknown>;
+  const findingId = noteIdKeys.map((key) => note[key]).find((value) => typeof value === "string");
+  if (typeof findingId !== "string") {
+    return undefined;
+  }
+  const text = (key: string, fallback = "") => (typeof note[key] === "string" ? (note[key] as string) : fallback);
+  return {
+    findingId,
+    explanation: text("explanation"),
+    falsePositiveNote: text("falsePositiveNote", undefined),
+    saferPattern: text("saferPattern", undefined)
+  };
 }
 
 export function buildAgentPrompt(

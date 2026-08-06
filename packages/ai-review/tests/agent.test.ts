@@ -44,6 +44,28 @@ describe("parseAgentResponse", () => {
     expect(parsed?.type).toBe("final");
   });
 
+  it("normalizes common note key aliases instead of dropping notes", () => {
+    const parsed = parseAgentResponse(
+      JSON.stringify({
+        type: "final",
+        summary: "reviewed",
+        notes: [
+          { finding_id: "finding-1", explanation: "real risk" },
+          { id: "finding-2", explanation: "likely false positive" },
+          { findingID: "finding-3", explanation: "confirmed" }
+        ]
+      })
+    );
+
+    expect(parsed?.type).toBe("final");
+    if (parsed?.type === "final") {
+      expect(parsed.result.notes).toHaveLength(3);
+      expect(parsed.result.notes[0].findingId).toBe("finding-1");
+      expect(parsed.result.notes[1].findingId).toBe("finding-2");
+      expect(parsed.result.notes[2].findingId).toBe("finding-3");
+    }
+  });
+
   it("returns undefined for non-JSON text", () => {
     expect(parseAgentResponse("AI summary")).toBeUndefined();
   });
