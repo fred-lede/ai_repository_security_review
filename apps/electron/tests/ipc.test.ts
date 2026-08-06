@@ -12,6 +12,7 @@ describe("Electron IPC allowlist", () => {
       "report:read",
       "report:export",
       "ai-review:run",
+      "finding:review",
       "ai-review:progress",
       "ai-models:list",
       "ai-connection:test",
@@ -105,5 +106,18 @@ describe("main window lifecycle", () => {
     expect(source).toMatch(/{ role: "copy" /);
     expect(source).toMatch(/{ role: "paste" /);
     expect(source).toMatch(/{ role: "selectAll" /);
+  });
+
+  it("keeps finding:review in the IPC allowlist", () => {
+    expect(isAllowedIpcChannel("finding:review")).toBe(true);
+  });
+
+  it("registers the finding:review handler and lazy-loads runDeepDive", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toContain('ipcMain.handle("finding:review"');
+    expect(source).toContain('assertAllowed("finding:review")');
+    expect(source).toContain("runDeepDive(");
+    expect(source).toContain("scanPath: payload.report.target.localPath ?? undefined");
   });
 });

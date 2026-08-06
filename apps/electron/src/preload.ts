@@ -3,7 +3,7 @@ import { contextBridge, ipcRenderer } from "electron";
 type AllowedIpcChannel =
   | "scan:start" | "scan:cancel"
   | "report:read" | "report:export"
-  | "ai-review:run"
+  | "ai-review:run" | "finding:review"
   | "ai-models:list"
   | "ai-connection:test"
   | "folder:open";
@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   reportRead: (payload: unknown) => invoke("report:read", payload),
   reportExport: (payload: unknown) => invoke("report:export", payload),
   aiReviewRun: (payload: unknown) => invoke("ai-review:run", payload),
+  findingReview: (payload: unknown) => invoke("finding:review", payload),
   aiModelsList: (payload: unknown) => invoke("ai-models:list", payload),
   aiConnectionTest: (payload: unknown) => invoke("ai-connection:test", payload),
   folderOpen: (payload: unknown) => invoke("folder:open", payload),

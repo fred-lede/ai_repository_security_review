@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { AiProviderConfig } from "@repo-auditor/ai-review";
-import type { AuditReport, Language, NetworkPolicy, OutputFormat } from "@repo-auditor/scanner-core";
+import type { AuditReport, Finding, Language, NetworkPolicy, OutputFormat } from "@repo-auditor/scanner-core";
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage } from "electron";
 import { isAllowedIpcChannel } from "./ipc.js";
 
@@ -24,6 +24,13 @@ interface AiReviewPayload {
   execute?: boolean;
   reportProgress?: boolean;
   outputFormats?: OutputFormat[];
+}
+
+interface FindingReviewPayload {
+  finding: Finding;
+  report: AuditReport;
+  provider: AiProviderConfig;
+  language?: Language;
 }
 
 interface AiModelsPayload {
@@ -224,6 +231,25 @@ ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
   const mergedReport = mergeAiFindingsIntoReport(payload.report, result);
   const mergedOutputs = renderOutputs(mergedReport, payload.outputFormats ?? ["markdown", "json"], provider.language);
   return { ...result, mergedReport, mergedOutputs };
+});
+
+ipcMain.handle("finding:review", async (_event, payload: FindingReviewPayload) => {
+  assertAllowed("finding:review");
+  const finding = payload?.finding;
+  if (!finding || typeof finding.id !== "string" || typeof finding.filePath !== "string") {
+    return { error: "A valid finding is required" };
+  }
+  const { runDeepDive } = await import("@repo-auditor/ai-review");
+  const provider = {
+    ...payload.provider,
+    language: payload.provider.language ?? "zh-TW",
+    redactionEnabled: true,
+    timeoutMs: 120000,
+    retryLimit: 1
+  };
+  return runDeepDive(finding, payload.report, provider, {
+    scanPath: payload.report.target.localPath ?? undefined
+  });
 });
 
 ipcMain.handle("ai-models:list", async (_event, payload: AiModelsPayload) => {

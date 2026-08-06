@@ -4,6 +4,7 @@ export const allowedIpcChannels = [
   "report:read",
   "report:export",
   "ai-review:run",
+  "finding:review",
   "ai-review:progress",
   "ai-models:list",
   "ai-connection:test",
