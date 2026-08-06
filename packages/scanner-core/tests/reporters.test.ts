@@ -257,7 +257,8 @@ describe("reporters", () => {
         githubWorkflowFiles: [".github/workflows/ci.yml"],
         electronIpcFiles: ["src/main.ts"],
         persistenceIndicators: [{ filePath: "src/db.ts", line: 4, snippet: "await prisma.user.create({ data })" }],
-        dangerousCalls: []
+        dangerousCalls: [],
+        threatSignals: []
       },
       findings
     );
