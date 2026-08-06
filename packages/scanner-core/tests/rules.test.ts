@@ -256,6 +256,8 @@ describe("threat-family rules", () => {
         evidenceTags: expect.arrayContaining(["webhook", "exfiltration-candidate"])
       })
     );
+    const exfil = findings.filter((f) => f.category === "data-exfiltration");
+    expect(exfil).toHaveLength(1);
   });
 
   it("does not flag a lone webhook with no sensitive source as exfiltration candidate", async () => {
