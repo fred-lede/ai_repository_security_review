@@ -2,8 +2,6 @@
 
 A multi-layered security analysis tool that detects suspicious behavior in repositories, npm packages, and source code. Combines **deterministic static analysis** (suspicious patterns, data flow tracing) with an **optional AI review layer** for human-readable assessment.
 
-**Current version: 0.2.0**
-
 ```sh
 npm run dev:cli -- scan ./fixtures/malicious-package
 ```
