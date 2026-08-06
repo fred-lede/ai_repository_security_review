@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildAiReviewPrompt, previewProviderRequest, runAiReview } from "../src/review.js";
+import { buildAiReviewPrompt, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "../src/review.js";
 import type { AiProviderConfig } from "../src/types.js";
 import type { AuditReport } from "@repo-auditor/scanner-core";
 
@@ -139,6 +139,115 @@ describe("batched agent review", () => {
     ]);
     expect(calls.length).toBeGreaterThan(0);
   });
+
+  describe("normalizeAiFindings", () => {
+  it("drops out-of-scope categories and caps risk at Medium with Low confidence and source ai", () => {
+    const normalized = normalizeAiFindings([
+      {
+        category: "phishing",
+        filePath: "phish.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "credential harvest",
+        explanation: "x",
+        recommendedFix: "y"
+      },
+      {
+        category: "command-injection" as any,
+        filePath: "other.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "exec(x)",
+        explanation: "out of scope",
+        recommendedFix: "y"
+      }
+    ]);
+
+    expect(normalized).toHaveLength(1);
+    expect(normalized[0].category).toBe("phishing");
+    expect(normalized[0].riskLevel).toBe("Medium");
+    expect(normalized[0].confidence).toBe("Low");
+    expect(normalized[0].source).toBe("ai");
+  });
+
+  it("drops findings without filePath or codeSnippet", () => {
+    const normalized = normalizeAiFindings([
+      {
+        category: "network-attack",
+        filePath: "",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "",
+        explanation: "missing path/snippet",
+        recommendedFix: "y"
+      }
+    ]);
+
+    expect(normalized).toHaveLength(0);
+  });
+});
+
+describe("mergeAiFindingsIntoReport", () => {
+  it("appends new findings and recomputes risk", () => {
+    const mergeReport: AuditReport = {
+      ...report,
+      findings: [
+        {
+          id: "finding-1",
+          riskLevel: "Medium",
+          category: "network",
+          filePath: "src/index.ts",
+          lineStart: 1,
+          lineEnd: 1,
+          codeSnippet: "const token = '123'; fetch('https://evil.example')",
+          explanation: "network exfiltration candidate",
+          recommendedFix: "Remove sensitive payloads from outbound requests.",
+          evidenceTags: ["network-endpoint"],
+          confidence: "Low"
+        }
+      ],
+      risk: {
+        overallRiskLevel: "Medium",
+        decision: "Needs Review",
+        rationale: "non-blocking",
+        topRisks: ["Medium: network exfiltration candidate"],
+        severityCounts: { Critical: 0, High: 0, Medium: 1, Low: 0, Info: 0 },
+        categoryCounts: { network: 1 },
+        blockingFindingIds: [],
+        residualRisk: "static only",
+        scanLimitations: ["static analysis only"]
+      },
+      attackSurface: []
+    };
+    const merged = mergeAiFindingsIntoReport(mergeReport, {
+      providerType: "cloud",
+      model: "gpt-test",
+      generatedAt: new Date().toISOString(),
+      summary: "s",
+      findingNotes: [],
+      newFindings: [
+        {
+          id: "finding-9",
+          riskLevel: "Medium",
+          category: "phishing" as any,
+          filePath: "phish.js",
+          lineStart: 1,
+          lineEnd: 1,
+          codeSnippet: "credential harvest",
+          explanation: "x",
+          recommendedFix: "y",
+          evidenceTags: ["phishing"],
+          source: "ai",
+          confidence: "Low"
+        }
+      ]
+    });
+
+    expect(merged.findings).toHaveLength(2);
+    expect(merged.risk.decision).toBe("Needs Review");
+    expect((merged.risk.categoryCounts as Record<string, number>).phishing).toBe(1);
+  });
+});
 
   it("short-circuits with a placeholder when there are no findings", async () => {
     const noFindings = { ...report, findings: [] };

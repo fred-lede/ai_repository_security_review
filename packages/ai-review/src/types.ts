@@ -1,3 +1,5 @@
+import type { Finding } from "@repo-auditor/scanner-core";
+
 export type AiProviderType = "cloud" | "ollama" | "custom";
 export type AiDataSharingMode = "metadata-only" | "finding-snippets" | "full-files";
 
@@ -27,6 +29,8 @@ export interface AiReviewResult {
     falsePositiveNote?: string;
     saferPattern?: string;
   }>;
+  newFindings: Finding[];
+  truncated?: boolean;
 }
 
 export interface AiNewFinding {
@@ -44,4 +48,6 @@ export interface AiReviewOptions {
   maxRounds?: number;
   maxFindingsPerBatch?: number;
   maxTokensPerReview?: number;
+  maxTotalMs?: number;
+  onBatchProgress?: (done: number, total: number) => void;
 }

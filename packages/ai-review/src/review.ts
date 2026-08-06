@@ -1,9 +1,10 @@
-import type { AuditReport, Finding } from "@repo-auditor/scanner-core";
+import { assessRisk, buildAttackSurface } from "@repo-auditor/scanner-core";
+import type { AuditReport, Finding, Language } from "@repo-auditor/scanner-core";
 import { runAgentLoop, type AgentNote } from "./agent.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
-import type { AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
+import type { AiNewFinding, AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
 
 export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfig): string {
   const findings = report.findings.map((finding) => serializeFindingForPrompt(finding, config));
@@ -15,7 +16,8 @@ export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfi
   const lang = config.language ?? "zh-TW";
   const prompt = [
     "You are reviewing deterministic security scanner findings.",
-    "Do not create new findings. Explain only the evidence provided.",
+    "You MAY add new findings for phishing, network attack, or data exfiltration only, and only after verifying the evidence in real code.",
+    "Do not invent findings in any other category.",
     "Mark uncertainty clearly and focus on risk, false-positive considerations, and safer patterns.",
     langInstruction[lang] ?? langInstruction["zh-TW"],
     JSON.stringify(
@@ -63,8 +65,21 @@ export async function runAiReview(
   const summaries: string[] = [];
   const rawTexts: string[] = [];
   const budgetPerBatch = Math.max(2000, Math.floor(maxTokensPerReview / batches.length));
+  const newFindings: Finding[] = [];
+  let truncated = false;
+  const maxTotalMs = options.maxTotalMs ?? 600_000;
+  const deadline = Date.now() + maxTotalMs;
+  const controller = new AbortController();
 
-  for (const batch of batches) {
+  for (let index = 0; index < batches.length; index += 1) {
+    const batch = batches[index];
+    options.onBatchProgress?.(index, batches.length);
+
+    if (Date.now() >= deadline || controller.signal.aborted) {
+      truncated = true;
+      break;
+    }
+
     const loopResult = await runAgentLoop(
       config,
       buildSystemPrompt(config),
@@ -78,6 +93,7 @@ export async function runAiReview(
     if (loopResult.result) {
       summaries.push(loopResult.result.summary);
       notes.push(...loopResult.result.notes);
+      newFindings.push(...normalizeAiFindings(loopResult.result.newFindings));
     } else if (loopResult.raw) {
       rawTexts.push(loopResult.raw);
     }
@@ -92,7 +108,9 @@ export async function runAiReview(
     model: config.model,
     generatedAt: new Date().toISOString(),
     summary,
-    findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes
+    findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes,
+    newFindings,
+    truncated
   };
 }
 
@@ -144,6 +162,54 @@ function mergeNotes(
   });
 }
 
+const allowedAiCategories = new Set(["phishing", "network-attack", "data-exfiltration"]);
+
+export function normalizeAiFindings(newFindings: AiNewFinding[]): Finding[] {
+  const out: Finding[] = [];
+
+  for (const nf of newFindings) {
+    if (!nf || !allowedAiCategories.has(nf.category)) {
+      continue;
+    }
+    if (!nf.filePath || !nf.codeSnippet) {
+      continue;
+    }
+    const lineStart = Number(nf.lineStart);
+    const lineEnd = Number(nf.lineEnd);
+    if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd)) {
+      continue;
+    }
+
+    out.push({
+      id: "",
+      riskLevel: "Medium",
+      category: nf.category as Finding["category"],
+      filePath: nf.filePath,
+      lineStart,
+      lineEnd: Math.max(lineStart, lineEnd),
+      codeSnippet: nf.codeSnippet,
+      explanation: nf.explanation,
+      recommendedFix: nf.recommendedFix,
+      evidenceTags: ["ai-sourced", nf.category],
+      source: "ai",
+      confidence: "Low"
+    });
+  }
+
+  return out;
+}
+
+export function mergeAiFindingsIntoReport(report: AuditReport, result: AiReviewResult): AuditReport {
+  const findings = [...report.findings, ...result.newFindings];
+  const risk = assessRisk(findings, (report as { language?: Language }).language ?? "zh-TW");
+  return {
+    ...report,
+    findings,
+    risk,
+    attackSurface: buildAttackSurface({ ...report, findings })
+  };
+}
+
 function buildSystemPrompt(config: AiProviderConfig): string {
   const toolGuidance =
     config.dataSharingMode === "metadata-only"
@@ -176,6 +242,8 @@ function buildBatchPrompt(
 
   const prompt = [
     "You are investigating deterministic security scanner findings.",
+    "You MAY add new findings for phishing, network attack, or data exfiltration, but only after reading the real source with file_read or code_search to verify the evidence.",
+    "Do not invent findings in any other category.",
     "Use tools to read the actual source code and verify each finding before writing notes.",
     "For each finding decide: real risk, likelihood of a false positive, and a safer pattern.",
     `There are ${batch.length} finding(s) to review in this batch.`,
@@ -200,7 +268,9 @@ export function createOfflineAiReviewPlaceholder(report: AuditReport, config: Ai
       findingId: finding.id,
       explanation: t("reviewEvidence", finding.category, finding.filePath),
       saferPattern: t(finding.recommendedFix)
-    }))
+    })),
+    newFindings: [],
+    truncated: false
   };
 }
 
