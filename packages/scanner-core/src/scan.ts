@@ -56,7 +56,7 @@ export async function scanTarget(input: string, options: ScanOptions): Promise<S
   };
 }
 
-function renderOutputs(report: AuditReport, outputFormats: OutputFormat[], lang: Language = "zh-TW"): ScanResult["outputs"] {
+export function renderOutputs(report: AuditReport, outputFormats: OutputFormat[], lang: Language = "zh-TW"): ScanResult["outputs"] {
   const selectedFormats = new Set(outputFormats);
   const outputs: ScanResult["outputs"] = {
     decision: renderDecisionRecord(report, lang),

@@ -23,6 +23,7 @@ interface AiReviewPayload {
   provider: AiProviderConfig;
   execute?: boolean;
   reportProgress?: boolean;
+  outputFormats?: OutputFormat[];
 }
 
 interface AiModelsPayload {
@@ -202,6 +203,7 @@ ipcMain.handle("report:export", async (_event, payload: ExportPayload) => {
 ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
   assertAllowed("ai-review:run");
   const { createOfflineAiReviewPlaceholder, mergeAiFindingsIntoReport, runAiReview } = await import("@repo-auditor/ai-review");
+  const { renderOutputs } = await import("@repo-auditor/scanner-core");
   const provider = {
     ...payload.provider,
     language: payload.provider.language ?? "zh-TW"
@@ -220,7 +222,8 @@ ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
       })
     : createOfflineAiReviewPlaceholder(payload.report, provider);
   const mergedReport = mergeAiFindingsIntoReport(payload.report, result);
-  return { ...result, mergedReport };
+  const mergedOutputs = renderOutputs(mergedReport, payload.outputFormats ?? ["markdown", "json"], provider.language);
+  return { ...result, mergedReport, mergedOutputs };
 });
 
 ipcMain.handle("ai-models:list", async (_event, payload: AiModelsPayload) => {

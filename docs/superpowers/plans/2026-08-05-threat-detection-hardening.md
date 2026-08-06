@@ -28,7 +28,7 @@ Track 2 (ai-review + electron):
 - `packages/ai-review/src/review.ts` — prompt relax, deadline/progress, `normalizeAiFindings`, `mergeAiFindingsIntoReport`
 - `packages/ai-review/src/types.ts` — `contextWindow`, `maxTotalMs`, `onBatchProgress`, `AiNewFinding`, `newFindings`, `truncated`
 - `packages/ai-review/src/index.ts` — exports
-- `apps/electron/src/main.ts` — `ai-review:run` returns `mergedReport`
+- `apps/electron/src/main.ts` — `ai-review:run` returns `mergedReport` and regenerated `mergedOutputs`
 - `apps/electron/src/renderer/index.html` — batch progress copy + merged report render
 
 Tests:
@@ -1389,31 +1389,61 @@ Expected: PASS (existing allowlist already covers `ai-review:run`; the added tes
 Replace the handler body (lines 201-211):
 
 ```ts
-ipcMain.handle("ai-review:run", async (_event, payload: AiReviewPayload) => {
+ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
   assertAllowed("ai-review:run");
   const { createOfflineAiReviewPlaceholder, mergeAiFindingsIntoReport, runAiReview } = await import("@repo-auditor/ai-review");
+  const { renderOutputs } = await import("@repo-auditor/scanner-core");
   const provider = {
     ...payload.provider,
     language: payload.provider.language ?? "zh-TW"
   };
+  const onBatchProgress = payload.reportProgress
+    ? (done: number, total: number) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send("ai-review:progress", { done, total });
+        }
+      }
+    : undefined;
   const result = payload.execute
-    ? await runAiReview(payload.report, provider, { scanPath: payload.report.target.localPath ?? undefined })
+    ? await runAiReview(payload.report, provider, {
+        scanPath: payload.report.target.localPath ?? undefined,
+        onBatchProgress
+      })
     : createOfflineAiReviewPlaceholder(payload.report, provider);
   const mergedReport = mergeAiFindingsIntoReport(payload.report, result);
-  return { ...result, mergedReport };
+  const mergedOutputs = renderOutputs(mergedReport, payload.outputFormats ?? ["markdown", "json"], provider.language);
+  return { ...result, mergedReport, mergedOutputs };
 });
 ```
+
+**Plan fix (follow-up commit):** the original Step 3 snippet set the renderer's `outputs` to `undefined`, which crashed `renderResult` (reads `result.outputs.markdown`) and the export handler (`Object.entries(payload.outputs)`) with "Cannot read properties of undefined (reading 'markdown')". Instead, `main.ts` regenerates `mergedOutputs` from the merged report via `renderOutputs` (newly exported from `scan.ts`), and the renderer uses them so the preview and exported files reflect the AI-merged findings.
 
 - [ ] **Step 4: Update renderer to use `mergedReport`**
 
 In `apps/electron/src/renderer/index.html`, in the `ai-review` click handler (around line 943), after `state.aiReview = await ...`, add:
 
 ```js
+const outputFormats = ["markdown", "json", "mermaid", "sarif", "html", "pdf"].filter(
+  (format) => state.result.outputs && format in state.result.outputs
+);
+state.aiReview = await window.repoAuditor.aiReviewRun({
+  report: state.result.report,
+  execute: true,
+  reportProgress: true,
+  outputFormats,
+  provider: { ... }
+});
 if (state.aiReview.mergedReport) {
-  state.result = { ...state.result, report: state.aiReview.mergedReport, outputs: undefined };
+  state.result = {
+    ...state.result,
+    report: state.aiReview.mergedReport,
+    outputs: state.aiReview.mergedOutputs ?? state.result.outputs
+  };
   renderResult(state.result);
 }
 ```
+
+Guard the preview fallback in `renderResult` (`result.outputs?.markdown`) so a missing outputs object cannot crash rendering.
 
 - [ ] **Step 5: Add batch progress copy**
 

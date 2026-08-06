@@ -83,6 +83,21 @@ describe("main window lifecycle", () => {
     expect(isAllowedIpcChannel("ai-review:run")).toBe(true);
   });
 
+  it("regenerates report outputs from the merged AI report so preview and export are not stale", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toContain("renderOutputs(mergedReport");
+    expect(source).toContain("mergedOutputs");
+  });
+
+  it("uses merged outputs in the renderer instead of nulling them (regression: outputs undefined)", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toContain("outputs: state.aiReview.mergedOutputs");
+    expect(source).not.toContain("outputs: undefined");
+    expect(source).toMatch(/result\.outputs\?\.markdown/);
+  });
+
   it("keeps clipboard shortcuts working via an Edit menu", () => {
     const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
 

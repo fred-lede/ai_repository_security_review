@@ -29,7 +29,7 @@ export { compileRule, runRules } from "./rules.js";
 export type { RuleDefinition, RuleMatchCondition, RuleHandler } from "./ruleTypes.js";
 export { loadExternalRules, saveExternalRules } from "./ruleLoader.js";
 export { acquireRemoteTarget, cleanupRemoteDir } from "./remoteAcquisition.js";
-export { scanTarget } from "./scan.js";
+export { renderOutputs, scanTarget } from "./scan.js";
 export type { ScanOutputName, ScanResult } from "./scan.js";
 export { resolveTarget } from "./targetResolver.js";
 export type { DangerousCall, DependencySource, LanguageId, LanguagePattern, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";

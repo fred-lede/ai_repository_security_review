@@ -947,10 +947,14 @@
         });
 
         try {
+          const outputFormats = ["markdown", "json", "mermaid", "sarif", "html", "pdf"].filter(
+            (format) => state.result.outputs && format in state.result.outputs
+          );
           state.aiReview = await window.repoAuditor.aiReviewRun({
             report: state.result.report,
             execute: true,
             reportProgress: true,
+            outputFormats,
             provider: {
               language: currentLang(),
               type: $("provider-type").value,
@@ -964,7 +968,11 @@
             }
           });
           if (state.aiReview.mergedReport) {
-            state.result = { ...state.result, report: state.aiReview.mergedReport, outputs: undefined };
+            state.result = {
+              ...state.result,
+              report: state.aiReview.mergedReport,
+              outputs: state.aiReview.mergedOutputs ?? state.result.outputs
+            };
             renderResult(state.result);
           }
           $("preview").className = "";
@@ -1097,7 +1105,7 @@
         $("risk").textContent = report.risk.overallRiskLevel;
         $("finding-count").textContent = String(report.findings.length);
         $("outbound-count").textContent = String(report.dataFlow.nodes.filter((node) => node.leavesMachine).length);
-        $("preview").textContent = result.outputs.markdown || JSON.stringify(report, null, 2);
+        $("preview").textContent = result.outputs?.markdown || JSON.stringify(report, null, 2);
         $("findings").replaceChildren(
           ...report.findings.map((finding) => {
             const el = document.createElement("div");
