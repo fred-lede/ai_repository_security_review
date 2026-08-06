@@ -75,7 +75,10 @@ export function parseAgentResponse(text: string): AgentResponse {
             typeof nf.category === "string" &&
             typeof nf.filePath === "string" &&
             typeof nf.codeSnippet === "string" &&
-            typeof nf.explanation === "string"
+            typeof nf.explanation === "string" &&
+            typeof nf.lineStart === "number" &&
+            typeof nf.lineEnd === "number" &&
+            typeof nf.recommendedFix === "string"
         )
       : [];
     return {
@@ -122,7 +125,8 @@ export function buildAgentPrompt(
 
 export function resolveTokenBudget(config: AiProviderConfig, maxTokensPerReview: number): number {
   const contextWindow = config.contextWindow ?? (config.type === "ollama" ? 32768 : 131072);
-  return Math.max(2000, Math.min(maxTokensPerReview, Math.floor(contextWindow * 0.7)));
+  const safeTokensPerReview = typeof maxTokensPerReview === "number" && maxTokensPerReview > 0 ? maxTokensPerReview : 2000;
+  return Math.max(2000, Math.min(safeTokensPerReview, Math.floor(contextWindow * 0.7)));
 }
 
 function buildPromptWithinBudget(
