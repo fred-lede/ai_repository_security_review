@@ -15,6 +15,8 @@ export type Decision = "Block" | "Needs Review" | "Monitor" | "Pass";
 export type OutputFormat = "markdown" | "json" | "sarif" | "mermaid" | "html" | "pdf";
 export type FindingCategory =
   | "data-exfiltration"
+  | "phishing"
+  | "network-attack"
   | "credential-leakage"
   | "hidden-telemetry"
   | "tracking"

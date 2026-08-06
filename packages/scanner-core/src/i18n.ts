@@ -28,6 +28,8 @@ const categoryLabels: Record<Language, Record<FindingCategory, string>> = {
     "electron-ipc": "Electron IPC Risk",
     persistence: "Persistence Mechanism",
     network: "Network Communication",
+    phishing: "Phishing",
+    "network-attack": "Network Attack",
     filesystem: "Filesystem Access",
     environment: "Environment Variable Access",
     database: "Database Access"
@@ -45,6 +47,8 @@ const categoryLabels: Record<Language, Record<FindingCategory, string>> = {
     "electron-ipc": "Electron IPC 風險",
     persistence: "持久化機制",
     network: "網路通訊",
+    phishing: "釣魚",
+    "network-attack": "網路攻擊",
     filesystem: "檔案系統存取",
     environment: "環境變數存取",
     database: "資料庫存取"
@@ -62,6 +66,8 @@ const categoryLabels: Record<Language, Record<FindingCategory, string>> = {
     "electron-ipc": "Electron IPC 风险",
     persistence: "持久化机制",
     network: "网络通信",
+    phishing: "钓鱼",
+    "network-attack": "网络攻击",
     filesystem: "文件系统访问",
     environment: "环境变量访问",
     database: "数据库访问"

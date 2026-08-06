@@ -20,7 +20,7 @@ export {
   buildAttackSurface
 } from "./reporters.js";
 export type { RiskMatrixRow } from "./reporters.js";
-export { applyBuiltinRules, builtinRules, generateFinding } from "./defaultRules.js";
+export { applyBuiltinRules, builtinRules, exfiltrationCorrelation, generateFinding } from "./defaultRules.js";
 export type { BuiltinRule } from "./defaultRules.js";
 export { assessRisk } from "./risk.js";
 export { computeFinalVerdict, computeTrustScore } from "./trustScore.js";

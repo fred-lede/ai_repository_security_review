@@ -15,6 +15,11 @@ const dcTags: DangerousCallTagsFn = (item) => {
   return Array.isArray(tags) ? (tags as string[]) : [];
 };
 
+const threatSignalTags: TagsFn = (item) => {
+  const tags = item.evidenceTags;
+  return Array.isArray(tags) ? (tags as string[]) : [];
+};
+
 export interface BuiltinRule {
   id: string;
   description: string;
@@ -299,6 +304,90 @@ export const builtinRules: BuiltinRule[] = [
     recommendedFix: () =>
       "Pin external actions to full commit SHAs and audit their source.",
     tags: dcTags
+  },
+  {
+    id: "reverse-shell",
+    description: "Detects reverse or bind shells that connect back to an attacker-controlled host",
+    category: "network-attack",
+    defaultRiskLevel: "Critical",
+    inventoryField: "threatSignals",
+    match: (item) => ["reverse-shell-dev-tcp", "reverse-shell-nc", "bind-shell"].includes(String(item.pattern)),
+    riskLevel: () => "Critical" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "The code establishes a reverse or bind shell, granting an attacker interactive remote access to the machine.",
+    recommendedFix: () => "Remove shell-backdoor code and terminate any active sessions; scan for how this code was introduced.",
+    tags: threatSignalTags
+  },
+  {
+    id: "ssrf-sink",
+    description: "Detects server-side request forgery sinks where a variable reaches an HTTP client",
+    category: "network-attack",
+    defaultRiskLevel: "High",
+    inventoryField: "threatSignals",
+    match: (item) => String(item.pattern) === "ssrf-sink",
+    riskLevel: () => "High" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "An HTTP client is called with a non-literal URL. If user-controlled, it becomes SSRF enabling access to internal resources.",
+    recommendedFix: () => "Validate and allowlist destination URLs; never pass raw user input to HTTP clients.",
+    tags: threatSignalTags
+  },
+  {
+    id: "port-scan",
+    description: "Detects port scanning primitives",
+    category: "network-attack",
+    defaultRiskLevel: "Medium",
+    inventoryField: "threatSignals",
+    match: (item) => String(item.pattern) === "port-scan",
+    riskLevel: () => "Medium" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "The code performs network reconnaissance (connect_ex, nmap, or masscan). This may indicate scanning or lateral movement.",
+    recommendedFix: () => "Remove scanning utilities unless this is an authorized security tool with documented scope.",
+    tags: threatSignalTags
+  },
+  {
+    id: "credential-harvest",
+    description: "Detects client-side credential harvesting (password reads, storage/cookie access)",
+    category: "phishing",
+    defaultRiskLevel: "Critical",
+    inventoryField: "threatSignals",
+    match: (item) => String(item.pattern) === "credential-harvest",
+    riskLevel: () => "Critical" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "The code reads password fields, localStorage, or cookies. When combined with outbound transmission this is credential harvesting.",
+    recommendedFix: () => "Remove credential collection; if legitimate, keep credentials inside server-side sessions and never transmit them to third parties.",
+    tags: threatSignalTags
+  },
+  {
+    id: "keylogger",
+    description: "Detects keyboard logging primitives",
+    category: "phishing",
+    defaultRiskLevel: "High",
+    inventoryField: "threatSignals",
+    match: (item) => String(item.pattern) === "keylogger",
+    riskLevel: () => "High" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "The code registers keyboard listeners or hook APIs that capture keystrokes. This is characteristic of phishing/keylogging malware.",
+    recommendedFix: () => "Remove keystroke capture unless it is an explicitly documented accessibility feature.",
+    tags: threatSignalTags
+  },
+  {
+    id: "exfiltration-sink",
+    description: "Detects outbound data-exfiltration sinks (webhooks, encoded channels, non-HTTP, file upload)",
+    category: "data-exfiltration",
+    defaultRiskLevel: "High",
+    inventoryField: "threatSignals",
+    match: (item) => ["webhook-sink", "encoded-sink", "non-http-sink", "file-upload-sink"].includes(String(item.pattern)),
+    riskLevel: () => "High" as RiskLevel,
+    snippet: (item) => String(item.snippet),
+    explanation: () =>
+      "The code sends data through an exfiltration channel (webhook, encoded stream, non-HTTP connection, or file upload).",
+    recommendedFix: () => "Remove unauthorized outbound channels and route data only through approved, audited endpoints.",
+    tags: threatSignalTags
   }
 ];
 
@@ -352,6 +441,59 @@ export const networkRule: RuleHandler = (inventory) => {
   return findings;
 };
 
+export function exfiltrationCorrelation(
+  inventory: ProjectInventory,
+  existing: Finding[]
+): Finding[] {
+  const sinkPatterns = new Set(["webhook-sink", "encoded-sink", "non-http-sink", "file-upload-sink"]);
+  const hasSensitiveSource =
+    inventory.environmentVariables.length > 0 ||
+    inventory.filesystemReads.length > 0 ||
+    inventory.commandExecutions.length > 0;
+  const newFindings: Finding[] = [];
+
+  if (!hasSensitiveSource) {
+    return newFindings;
+  }
+
+  for (const signal of inventory.threatSignals) {
+    if (!sinkPatterns.has(signal.pattern)) {
+      continue;
+    }
+
+    const alreadyExfil = existing.find(
+      (f) =>
+        f.category === "data-exfiltration" &&
+        f.filePath === signal.filePath &&
+        f.lineStart === signal.line
+    );
+    if (alreadyExfil) {
+      alreadyExfil.evidenceTags = Array.from(
+        new Set([...alreadyExfil.evidenceTags, "exfiltration-candidate"])
+      );
+      continue;
+    }
+
+    newFindings.push({
+      id: "",
+      category: "data-exfiltration",
+      riskLevel: "High",
+      filePath: signal.filePath,
+      lineStart: signal.line,
+      lineEnd: signal.line,
+      codeSnippet: signal.snippet,
+      explanation:
+        "The project contains sensitive sources (env vars, filesystem reads, or command execution) and an outbound exfiltration sink. This is an exfiltration candidate — review whether sensitive data can flow to this destination.",
+      recommendedFix:
+        "Remove unauthorized outbound channels or isolate sensitive data from network-accessible code.",
+      evidenceTags: [...signal.evidenceTags, "exfiltration-candidate"],
+      confidence: "High"
+    });
+  }
+
+  return newFindings;
+}
+
 export function generateFinding(
   rule: BuiltinRule,
   item: Record<string, unknown>,
@@ -395,6 +537,7 @@ export function applyBuiltinRules(inventory: ProjectInventory): Finding[] {
   }
 
   findings.push(...networkRule(inventory));
+  findings.push(...exfiltrationCorrelation(inventory, findings));
 
   return findings.map((item, index) => ({ ...item, id: `finding-${index + 1}` }));
 }
