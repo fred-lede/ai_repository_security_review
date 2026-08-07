@@ -264,6 +264,18 @@
         margin-right: 6px;
       }
 
+      .dots::after {
+        content: "";
+        animation: dots 1.4s steps(1, end) infinite;
+      }
+
+      @keyframes dots {
+        0% { content: ""; }
+        33% { content: "."; }
+        66% { content: ".."; }
+        100% { content: "..."; }
+      }
+
       .pulse {
         animation: pulse 1.5s ease-in-out infinite;
       }
@@ -613,7 +625,7 @@
           noScanToExport: "Run a scan first before exporting",
           aiBatchProgress: "AI batch %done% of %total% done",
           aiDeepDive: "AI Deep-Dive",
-          aiDeepDiveReviewing: "Deep-diving...",
+          aiDeepDiveReviewing: "Deep-diving",
           aiDeepDiveFailed: "Deep-dive failed",
           aiDeepDiveTruncated: "The provider was interrupted; showing the raw response.",
           aiVerdictReal: "Real vulnerability",
@@ -686,7 +698,7 @@
           noScanToExport: "請先執行掃描再匯出",
           aiBatchProgress: "AI 批次 %done% / %total% 完成",
           aiDeepDive: "AI 深入分析",
-          aiDeepDiveReviewing: "深入分析中...",
+          aiDeepDiveReviewing: "深入分析中",
           aiDeepDiveFailed: "深入分析失敗",
           aiDeepDiveTruncated: "提供者連線中斷；顯示原始回應。",
           aiVerdictReal: "真實漏洞",
@@ -759,7 +771,7 @@
           noScanToExport: "请先执行扫描再导出",
           aiBatchProgress: "AI 批次 %done% / %total% 完成",
           aiDeepDive: "AI 深入分析",
-          aiDeepDiveReviewing: "深入分析中...",
+          aiDeepDiveReviewing: "深入分析中",
           aiDeepDiveFailed: "深入分析失败",
           aiDeepDiveTruncated: "提供商连接中断；显示原始响应。",
           aiVerdictReal: "真实漏洞",
@@ -1315,7 +1327,10 @@
               out.className = "finding-dive";
               const statusEl = document.createElement("p");
               statusEl.className = "muted";
-              statusEl.innerHTML = `<span class="spinner"></span>${t("aiDeepDiveReviewing")}`;
+              const dotsSpan = document.createElement("span");
+              dotsSpan.className = "dots";
+              statusEl.appendChild(document.createTextNode(t("aiDeepDiveReviewing")));
+              statusEl.appendChild(dotsSpan);
               out.appendChild(statusEl);
               detail.appendChild(out);
               try {
