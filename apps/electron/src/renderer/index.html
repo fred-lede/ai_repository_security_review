@@ -1313,6 +1313,10 @@
               diveBtn.textContent = t("aiDeepDiveReviewing");
               const out = document.createElement("div");
               out.className = "finding-dive";
+              const statusEl = document.createElement("p");
+              statusEl.className = "muted";
+              statusEl.innerHTML = `<span class="spinner"></span>${t("aiDeepDiveReviewing")}`;
+              out.appendChild(statusEl);
               detail.appendChild(out);
               try {
                 const res = await window.repoAuditor.findingReview({
@@ -1336,6 +1340,7 @@
                   return;
                 }
                 if (!res.result) {
+                  statusEl.remove();
                   const note = document.createElement("p");
                   note.className = "muted";
                   note.textContent = res.truncated ? t("aiDeepDiveTruncated") : t("aiDeepDiveFailed");
@@ -1347,6 +1352,7 @@
                   return;
                 }
                 const result = res.result;
+                statusEl.remove();
                 const verdictLabels = {
                   real: t("aiVerdictReal"),
                   "false-positive": t("aiVerdictFalsePositive"),

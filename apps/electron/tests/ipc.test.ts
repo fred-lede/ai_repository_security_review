@@ -127,6 +127,7 @@ describe("main window lifecycle", () => {
     expect(source).toContain("window.repoAuditor.findingReview");
     expect(source).toContain('t("aiDeepDive")');
     expect(source).toContain("aiVerdictReal");
+    expect(source).toContain('<span class="spinner"></span>${t("aiDeepDiveReviewing")}');
   });
 
   it("exposes findingReview on the runtime preload bridge", () => {
