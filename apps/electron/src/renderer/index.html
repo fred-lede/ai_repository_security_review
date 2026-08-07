@@ -176,6 +176,7 @@
 
       .findings {
         display: grid;
+        grid-auto-rows: max-content;
         gap: 8px;
         flex: 1;
         min-height: 0;
@@ -190,6 +191,7 @@
 
       .finding {
         border-left: 4px solid #d0d7de;
+        min-width: 0;
       }
 
       .finding[data-risk="Critical"],
@@ -506,18 +508,15 @@
         <button id="scan" data-i18n="runScan">Run Security Audit</button>
         <div id="scan-status"></div>
         <button id="ai-review" class="secondary" data-i18n="prepareAiReview">Prepare AI Review</button>
+        <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
+        <div id="export-status"></div>
         <hr />
         <button id="edit-rules" class="secondary">Edit Rules</button>
       </aside>
 
       <section>
         <div class="toolbar">
-          <div>
-            <h2 data-i18n="decision">Decision</h2>
-            <div id="target-label" class="muted"></div>
-          </div>
-          <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
-          <div id="export-status"></div>
+          <div id="target-label" class="muted"></div>
         </div>
 
         <div class="status">
@@ -590,7 +589,6 @@
           runScan: "Run Security Audit",
           prepareAiReview: "Prepare AI Review",
           exportReports: "Export Reports",
-          decision: "Decision",
           findings: "Findings",
           reportPreview: "Report Preview",
           noScan: "No scan has run.",
@@ -663,7 +661,6 @@
           runScan: "執行安全審查",
           prepareAiReview: "準備 AI 審查",
           exportReports: "匯出報告",
-          decision: "決策",
           findings: "發現項目",
           reportPreview: "報告預覽",
           noScan: "尚未執行掃描。",
@@ -736,7 +733,6 @@
           runScan: "执行安全审查",
           prepareAiReview: "准备 AI 审查",
           exportReports: "导出报告",
-          decision: "决策",
           findings: "发现项",
           reportPreview: "报告预览",
           noScan: "尚未执行扫描。",
@@ -1307,6 +1303,7 @@
                   return isHighlight ? `>>> ${prefix}${l.text}` : `    ${prefix}${l.text}`;
                 }).join("\n");
                 ctxBtn.replaceWith(pre);
+                pre.scrollIntoView({ block: "nearest" });
               } catch {
                 const span = document.createElement("span");
                 span.className = "muted";

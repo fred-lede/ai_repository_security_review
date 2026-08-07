@@ -147,6 +147,41 @@ describe("renderer findings layout", () => {
     expect(source).toMatch(/\.findings\s*{[^}]*flex:\s*1/s);
     expect(source).toMatch(/\.findings\s*{[^}]*min-height:\s*0/s);
     expect(source).toMatch(/\.findings\s*{[^}]*overflow:\s*auto/s);
+    expect(source).toMatch(/\.findings\s*{[^}]*grid-auto-rows:\s*max-content/s);
     expect(source).not.toContain("max-height: 55vh");
+  });
+
+  it("sizes finding rows to their content so cards grow when details expand", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/\.findings\s*{[^}]*grid-auto-rows:\s*max-content/s);
+  });
+
+  it("scrolls revealed source context into view", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/pre\.scrollIntoView\(\{\s*block:\s*"nearest"\s*\}\)/);
+  });
+
+  it("keeps finding cards within the list width so long context lines scroll inside the code block", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/\.finding\s*{[^}]*min-width:\s*0/s);
+  });
+});
+
+describe("renderer export button", () => {
+  it("does not duplicate the Decision heading at the top", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).not.toMatch(/data-i18n="decision"/);
+    expect(source).toContain('<strong id="decision">');
+  });
+
+  it("groups the export button and status under Prepare AI Review in the sidebar", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/id="ai-review"[^>]*>[\s\S]*?<button id="export" class="secondary" data-i18n="exportReports">[\s\S]*?<div id="export-status">/);
+    expect(source).not.toContain("section-footer");
   });
 });
