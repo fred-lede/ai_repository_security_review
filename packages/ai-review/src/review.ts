@@ -1,6 +1,7 @@
 import { assessRisk, buildAttackSurface } from "@repo-auditor/scanner-core";
 import type { AuditReport, Finding, Language } from "@repo-auditor/scanner-core";
 import { runAgentLoop, type AgentLoopResult, type AgentNote } from "./agent.js";
+import { correctFindingPositions } from "./position.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
@@ -105,6 +106,8 @@ export async function runAiReview(
     }
   }
 
+  const correctedNewFindings = await correctFindingPositions(newFindings, scanPath ?? "");
+
   const fallback = createOfflineAiReviewPlaceholder(report, config);
   const summary =
     summaries.length > 0 ? summaries.join("\n\n") : rawTexts.filter(Boolean).join("\n\n") || fallback.summary;
@@ -115,7 +118,7 @@ export async function runAiReview(
     generatedAt: new Date().toISOString(),
     summary,
     findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes,
-    newFindings,
+    newFindings: correctedNewFindings,
     truncated
   };
 }

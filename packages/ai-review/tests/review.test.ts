@@ -267,6 +267,64 @@ describe("mergeAiFindingsIntoReport", () => {
   });
 });
 
+  describe("AI-sourced finding position correction", () => {
+    it("snaps AI new-finding line numbers onto the real source file", async () => {
+      const fs = await import("node:fs/promises");
+      const os = await import("node:os");
+      const path = await import("node:path");
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), "ai-pos-correct-"));
+      await fs.writeFile(path.join(root, "vuln.js"), "const a = 1;\nconst b = 2;\nsend(data);\n");
+
+      const aiFinding = {
+        category: "data-exfiltration",
+        filePath: "vuln.js",
+        lineStart: 1,
+        lineEnd: 1,
+        codeSnippet: "send(data);",
+        explanation: "exfiltrates data",
+        recommendedFix: "remove exfiltration"
+      };
+
+      const fetchImpl = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  type: "final",
+                  summary: "found new issue",
+                  notes: [],
+                  newFindings: [aiFinding]
+                })
+              }
+            }
+          ]
+        })
+      }));
+
+      const localReport: AuditReport = {
+        ...report,
+        target: { ...report.target, localPath: root },
+        findings: [{ ...report.findings[0], filePath: "vuln.js" }]
+      };
+
+      const fullConfig = { ...config, dataSharingMode: "full-files" as const };
+      const result = await runAiReview(
+        localReport,
+        fullConfig,
+        { scanPath: root, maxFindingsPerBatch: 1, maxRounds: 1 },
+        fetchImpl
+      );
+
+      expect(result.newFindings).toHaveLength(1);
+      expect(result.newFindings[0].lineStart).toBe(3);
+      expect(result.newFindings[0].lineEnd).toBe(3);
+    });
+  });
+
   it("short-circuits with a placeholder when there are no findings", async () => {
     const noFindings = { ...report, findings: [] };
     const result = await runAiReview(noFindings, config, { scanPath: "fixture" });
