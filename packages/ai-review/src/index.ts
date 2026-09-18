@@ -1,6 +1,6 @@
 export { buildProviderRequest, listProviderModels, requestProviderCompletion } from "./providers.js";
 export type { FetchLike, ProviderModel, ProviderRequest } from "./providers.js";
-export { buildAiReviewPrompt, createOfflineAiReviewPlaceholder, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "./review.js";
+export { buildAiReviewPrompt, buildBatchPrompt, createOfflineAiReviewPlaceholder, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "./review.js";
 export { buildTools } from "./tools.js";
 export type { ReviewToolContext, ToolDefinition, ToolMode } from "./tools.js";
 export { buildAgentPrompt, estimateTokens, extractJsonObject, parseAgentResponse, parseToolCall, resolveTokenBudget, runAgentLoop } from "./agent.js";

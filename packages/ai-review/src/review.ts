@@ -38,6 +38,13 @@ export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfi
 
 const riskOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
 
+const categoryFocus: Record<string, string> = {
+  phishing: "For phishing findings, verify credential harvesting, keyloggers, and bulk-email sinks in real code.",
+  network: "For network findings, verify reverse/bind shells, SSRF, and port scanning in real code.",
+  "network-attack": "For network-attack findings, verify reverse/bind shells, SSRF, and port scanning in real code.",
+  "data-exfiltration": "For data-exfiltration findings, verify webhooks, encoded channels, and non-HTTP sinks in real code."
+};
+
 export async function runAiReview(
   report: AuditReport,
   config: AiProviderConfig,
@@ -249,7 +256,7 @@ function buildSystemPrompt(config: AiProviderConfig): string {
   ].join("\n");
 }
 
-function buildBatchPrompt(
+export function buildBatchPrompt(
   report: AuditReport,
   batch: Finding[],
   config: AiProviderConfig,
@@ -281,7 +288,10 @@ function buildBatchPrompt(
     fileHint
   ].join("\n");
 
-  return config.redactionEnabled ? redactSecrets(prompt) : prompt;
+  const focusLines = Array.from(new Set(batch.map((f) => categoryFocus[f.category]).filter(Boolean)));
+  const focusSection = focusLines.length > 0 ? `\n\nREVIEW FOCUS:\n${focusLines.join("\n")}` : "";
+
+  return config.redactionEnabled ? redactSecrets(prompt + focusSection) : prompt + focusSection;
 }
 
 export function createOfflineAiReviewPlaceholder(report: AuditReport, config: AiProviderConfig): AiReviewResult {
