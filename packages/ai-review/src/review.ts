@@ -5,7 +5,7 @@ import { correctFindingPositions } from "./position.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
-import type { AiNewFinding, AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
+import type { AiCoverage, AiNewFinding, AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
 
 export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfig): string {
   const findings = report.findings.map((finding) => serializeFindingForPrompt(finding, config));
@@ -72,12 +72,17 @@ export async function runAiReview(
   const deadline = Date.now() + maxTotalMs;
   const controller = new AbortController();
 
+  const allFindingIds = report.findings.map((f) => f.id);
+  const coveredIds = new Set<string>();
+  let skippedBatches = 0;
+
   for (let index = 0; index < batches.length; index += 1) {
     const batch = batches[index];
     options.onBatchProgress?.(index, batches.length);
 
     if (Date.now() >= deadline || controller.signal.aborted) {
       truncated = true;
+      skippedBatches += batches.length - index;
       break;
     }
 
@@ -94,6 +99,7 @@ export async function runAiReview(
       );
     } catch {
       truncated = true;
+      skippedBatches += batches.length - index;
       break;
     }
 
@@ -101,10 +107,21 @@ export async function runAiReview(
       summaries.push(loopResult.result.summary);
       notes.push(...loopResult.result.notes);
       newFindings.push(...normalizeAiFindings(loopResult.result.newFindings));
+      for (const finding of batch) {
+        coveredIds.add(finding.id);
+      }
     } else if (loopResult.raw) {
       rawTexts.push(loopResult.raw);
+      skippedBatches += 1;
     }
   }
+
+  const coverage: AiCoverage = {
+    total: allFindingIds.length,
+    covered: Array.from(coveredIds),
+    uncovered: allFindingIds.filter((id) => !coveredIds.has(id)),
+    skippedBatches
+  };
 
   const correctedNewFindings = await correctFindingPositions(newFindings, scanPath ?? "");
 
@@ -119,7 +136,8 @@ export async function runAiReview(
     summary,
     findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes,
     newFindings: correctedNewFindings,
-    truncated
+    truncated,
+    coverage
   };
 }
 

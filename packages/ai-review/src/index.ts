@@ -6,7 +6,7 @@ export type { ReviewToolContext, ToolDefinition, ToolMode } from "./tools.js";
 export { buildAgentPrompt, estimateTokens, extractJsonObject, parseAgentResponse, parseToolCall, resolveTokenBudget, runAgentLoop } from "./agent.js";
 export type { AgentFinalResult, AgentLoopOptions, AgentLoopResult, AgentNote, ToolCallResponse } from "./agent.js";
 export { redactSecrets } from "./redaction.js";
-export type { AiDataSharingMode, AiNewFinding, AiProviderConfig, AiProviderType, AiReviewOptions, AiReviewResult } from "./types.js";
+export type { AiCoverage, AiDataSharingMode, AiNewFinding, AiProviderConfig, AiProviderType, AiReviewOptions, AiReviewResult } from "./types.js";
 export { buildDeepDivePrompt, buildDeepDiveSystemPrompt, parseDeepDiveResponse, runDeepDive } from "./deepdive.js";
 export type { DeepDiveOptions, DeepDiveResult, DeepDiveRunResult, DeepDiveVerdict } from "./deepdive.js";
 export { correctFindingPositions, readLinesWithin, snapFindingPosition } from "./position.js";

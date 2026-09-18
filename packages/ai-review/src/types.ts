@@ -18,6 +18,13 @@ export interface AiProviderConfig {
   contextWindow?: number;
 }
 
+export interface AiCoverage {
+  total: number;
+  covered: string[];
+  uncovered: string[];
+  skippedBatches: number;
+}
+
 export interface AiReviewResult {
   providerType: AiProviderType;
   model: string;
@@ -31,6 +38,7 @@ export interface AiReviewResult {
   }>;
   newFindings: Finding[];
   truncated?: boolean;
+  coverage?: AiCoverage;
 }
 
 export interface AiNewFinding {

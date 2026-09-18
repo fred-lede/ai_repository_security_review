@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildAiReviewPrompt, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "../src/review.js";
+import { buildAiReviewPrompt, buildBatchPrompt, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "../src/review.js";
+import type { Finding } from "@repo-auditor/scanner-core";
 import type { AiProviderConfig } from "../src/types.js";
 import type { AuditReport } from "@repo-auditor/scanner-core";
 
@@ -322,6 +323,45 @@ describe("mergeAiFindingsIntoReport", () => {
       expect(result.newFindings).toHaveLength(1);
       expect(result.newFindings[0].lineStart).toBe(3);
       expect(result.newFindings[0].lineEnd).toBe(3);
+    });
+  });
+
+  describe("AI review coverage tracking", () => {
+    it("covers findings when batches produce a result", async () => {
+      const fetchImpl = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ type: "final", summary: "s", notes: [], newFindings: [] }) } }]
+        })
+      }));
+      const result = await runAiReview(report, config, { scanPath: "fixture", maxFindingsPerBatch: 1, maxRounds: 1 }, fetchImpl);
+      expect(result.coverage?.covered).toContain("finding-1");
+      expect(result.coverage?.uncovered).toEqual([]);
+      expect(result.coverage?.skippedBatches).toBe(0);
+      expect(result.coverage?.total).toBe(1);
+    });
+
+    it("marks findings uncovered when a batch errors", async () => {
+      const fetchImpl = vi.fn(async () => { throw new Error("network down"); });
+      const result = await runAiReview(report, config, { scanPath: "fixture", maxFindingsPerBatch: 1, maxRounds: 1 }, fetchImpl);
+      expect(result.coverage?.skippedBatches).toBeGreaterThan(0);
+      expect(result.coverage?.covered).toEqual([]);
+      expect(result.coverage?.uncovered).toContain("finding-1");
+    });
+  });
+
+  describe("buildBatchPrompt review focus", () => {
+    it("appends category-specific guidance for the batch", () => {
+      const prompt = buildBatchPrompt(report, report.findings, config, { scanPath: "", mode: "full-files" });
+      expect(prompt).toContain("REVIEW FOCUS");
+    });
+
+    it("omits the focus section when a category has no mapped guidance", () => {
+      const mapped = report.findings.map((f) => ({ ...f, category: "mystery" as unknown as Finding["category"] }));
+      const prompt = buildBatchPrompt(report, mapped, config, { scanPath: "", mode: "full-files" });
+      expect(prompt).not.toContain("REVIEW FOCUS");
     });
   });
 
