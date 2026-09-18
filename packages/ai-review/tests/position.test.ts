@@ -91,4 +91,26 @@ describe("correctFindingPositions", () => {
     const out = await correctFindingPositions([finding], "");
     expect(out).toEqual([finding]);
   });
+
+  it("leaves findings unchanged when the file is empty", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "pos-empty-"));
+    await fs.writeFile(path.join(root, "empty.js"), "");
+
+    const finding: Finding = {
+      id: "",
+      riskLevel: "Low",
+      category: "data-exfiltration",
+      filePath: "empty.js",
+      lineStart: 4,
+      lineEnd: 6,
+      codeSnippet: "b",
+      explanation: "e",
+      recommendedFix: "f",
+      evidenceTags: [],
+      source: "ai",
+      confidence: "Low"
+    };
+    const out = await correctFindingPositions([finding], root);
+    expect(out).toEqual([finding]);
+  });
 });

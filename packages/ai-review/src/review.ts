@@ -38,10 +38,13 @@ export function buildAiReviewPrompt(report: AuditReport, config: AiProviderConfi
 
 const riskOrder: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
 
+// Scanner findings use "network"; AI-sourced findings are normalized to "network-attack".
+// Both map to the same guidance.
+const networkFocus = "For network findings, verify reverse/bind shells, SSRF, and port scanning in real code.";
 const categoryFocus: Record<string, string> = {
   phishing: "For phishing findings, verify credential harvesting, keyloggers, and bulk-email sinks in real code.",
-  network: "For network findings, verify reverse/bind shells, SSRF, and port scanning in real code.",
-  "network-attack": "For network-attack findings, verify reverse/bind shells, SSRF, and port scanning in real code.",
+  network: networkFocus,
+  "network-attack": networkFocus,
   "data-exfiltration": "For data-exfiltration findings, verify webhooks, encoded channels, and non-HTTP sinks in real code."
 };
 

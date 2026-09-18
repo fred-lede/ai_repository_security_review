@@ -85,7 +85,7 @@ export async function correctFindingPositions(
       }
     }
     const lines = cache.get(finding.filePath);
-    if (!lines) {
+    if (!lines || lines.length === 0) {
       out.push(finding);
       continue;
     }
