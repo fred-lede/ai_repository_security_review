@@ -1,3 +1,7 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { Finding } from "@repo-auditor/scanner-core";
+
 export interface SnappedRange {
   lineStart: number;
   lineEnd: number;
@@ -41,4 +45,57 @@ export function snapFindingPosition(
   }
 
   return { lineStart: start, lineEnd: end };
+}
+
+export async function readLinesWithin(root: string, relPath: string): Promise<string[]> {
+  const rootAbs = path.resolve(root);
+  const resolved = path.resolve(rootAbs, relPath);
+  if (resolved !== rootAbs && !resolved.startsWith(rootAbs + path.sep)) {
+    throw new Error(`path escapes scan directory: ${relPath}`);
+  }
+  const content = await fs.readFile(resolved, "utf8");
+  const lines = content.split(/\r?\n/);
+  while (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+  return lines;
+}
+
+export async function correctFindingPositions(
+  findings: Finding[],
+  scanPath: string
+): Promise<Finding[]> {
+  if (!scanPath || findings.length === 0) {
+    return findings;
+  }
+
+  const cache = new Map<string, string[] | undefined>();
+  const out: Finding[] = [];
+
+  for (const finding of findings) {
+    if (!finding.filePath) {
+      out.push(finding);
+      continue;
+    }
+    if (!cache.has(finding.filePath)) {
+      try {
+        cache.set(finding.filePath, await readLinesWithin(scanPath, finding.filePath));
+      } catch {
+        cache.set(finding.filePath, undefined);
+      }
+    }
+    const lines = cache.get(finding.filePath);
+    if (!lines) {
+      out.push(finding);
+      continue;
+    }
+    const snapped = snapFindingPosition(lines, finding.lineStart, finding.lineEnd, finding.codeSnippet);
+    out.push({
+      ...finding,
+      lineStart: snapped.lineStart,
+      lineEnd: snapped.lineEnd
+    });
+  }
+
+  return out;
 }

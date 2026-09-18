@@ -9,3 +9,5 @@ export { redactSecrets } from "./redaction.js";
 export type { AiDataSharingMode, AiNewFinding, AiProviderConfig, AiProviderType, AiReviewOptions, AiReviewResult } from "./types.js";
 export { buildDeepDivePrompt, buildDeepDiveSystemPrompt, parseDeepDiveResponse, runDeepDive } from "./deepdive.js";
 export type { DeepDiveOptions, DeepDiveResult, DeepDiveRunResult, DeepDiveVerdict } from "./deepdive.js";
+export { correctFindingPositions, readLinesWithin, snapFindingPosition } from "./position.js";
+export type { SnappedRange } from "./position.js";
