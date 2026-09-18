@@ -25,6 +25,14 @@ export interface AiCoverage {
   skippedBatches: number;
 }
 
+export type ReflectionVerdict = "reaffirmed" | "likely-false-positive" | "uncertain";
+
+export interface AiReflection {
+  findingId: string;
+  verdict: ReflectionVerdict;
+  reasoning: string;
+}
+
 export interface AiReviewResult {
   providerType: AiProviderType;
   model: string;
@@ -39,6 +47,7 @@ export interface AiReviewResult {
   newFindings: Finding[];
   truncated?: boolean;
   coverage?: AiCoverage;
+  reflections?: AiReflection[];
 }
 
 export interface AiNewFinding {
@@ -58,4 +67,5 @@ export interface AiReviewOptions {
   maxTokensPerReview?: number;
   maxTotalMs?: number;
   onBatchProgress?: (done: number, total: number) => void;
+  reflection?: boolean;
 }
