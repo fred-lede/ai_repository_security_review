@@ -104,6 +104,51 @@ npm run package:linux
 npm run package:all    # All three platforms
 ```
 
+## GitHub Action
+
+Scan a repository from a workflow: the report lands in the job summary, an optional PR comment carries the findings, and the check fails when the decision is Block.
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Repository Security Auditor
+        uses: OWNER/REPO@main
+        with:
+          pr-comment: "true"
+```
+
+Inputs:
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `target` | `.` | Path to scan, relative to the workspace root |
+| `formats` | `markdown,json,sarif` | Comma-separated output formats |
+| `network-policy` | `offline` | `offline` rejects remote acquisition during the scan |
+| `fail-on-block` | `true` | Fail the job when the decision is Block |
+| `pr-comment` | `false` | Post/update a PR comment with the report (needs `pull-requests: write`) |
+
+Outputs: `decision` (Pass / Monitor / Needs Review / Block) and `report-path`.
+
+Notes:
+- The scan runs fully offline by default; set `network-policy: online` to allow remote acquisition (e.g. scanning an npm package name).
+- To publish the SARIF report to GitHub code scanning, add `github/codeql-action/upload-sarif@v3` with `sarif_file: repo-auditor-reports/results.sarif` after the action.
+- A full consumer workflow lives in `examples/security-scan.yml`.
+
 ## Project Structure
 
 ```
