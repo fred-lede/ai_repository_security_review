@@ -13,3 +13,5 @@ export { REFLECTION_FINAL_EXAMPLE, buildReflectionPrompt, buildReflectionSystemP
 export type { ReflectionOptions, ReflectionRunResult } from "./reflect.js";
 export { correctFindingPositions, readLinesWithin, snapFindingPosition } from "./position.js";
 export type { SnappedRange } from "./position.js";
+export { findResumableSession, listSessions, loadSession, newSession, saveSession, sessionFingerprint } from "./session.js";
+export type { AiReviewSession, SessionBatch, SessionListEntry } from "./session.js";

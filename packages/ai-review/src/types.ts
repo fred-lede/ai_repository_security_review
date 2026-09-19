@@ -48,6 +48,8 @@ export interface AiReviewResult {
   truncated?: boolean;
   coverage?: AiCoverage;
   reflections?: AiReflection[];
+  sessionId?: string;
+  resumedFromSession?: string;
 }
 
 export interface AiNewFinding {
@@ -68,4 +70,6 @@ export interface AiReviewOptions {
   maxTotalMs?: number;
   onBatchProgress?: (done: number, total: number) => void;
   reflection?: boolean;
+  sessionDir?: string;
+  resumeSessionId?: string;
 }
