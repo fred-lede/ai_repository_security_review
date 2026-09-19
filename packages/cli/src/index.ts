@@ -82,9 +82,16 @@ export function createProgram(io: CliIo = defaultIo): Command {
     .description("Measure scanner precision/recall against a hand-labeled benchmark spec")
     .option("--spec <path>", "benchmark spec file", "benchmarks/benchmarks.json")
     .option("--output <dir>", "output directory", "reports/bench")
-    .action(async (flags: { spec: string; output: string }) => {
+    .option("--ai <type>", "enable AI-augmented benchmarking (cloud|ollama|custom)")
+    .option("--ai-url <url>", "AI provider base URL")
+    .option("--ai-model <model>", "AI model name")
+    .option("--ai-key <key>", "AI API key (or REPO_AUDITOR_AI_KEY env var)")
+    .action(async (flags: { spec: string; output: string; ai?: string; aiUrl?: string; aiModel?: string; aiKey?: string }) => {
       const { runBench } = await import("./bench.js");
-      await runBench(flags.spec, flags.output, io);
+      const aiOptions = flags.ai
+        ? buildBenchAiOptions({ ai: flags.ai, aiUrl: flags.aiUrl, aiModel: flags.aiModel, aiKey: flags.aiKey })
+        : undefined;
+      await runBench(flags.spec, flags.output, io, aiOptions);
     });
 
   return program;
@@ -104,6 +111,28 @@ function parseOutputFormats(value: string): OutputFormat[] {
   }
 
   return formats as OutputFormat[];
+}
+
+function buildBenchAiOptions(flags: { ai: string; aiUrl?: string; aiModel?: string; aiKey?: string }): import("./bench.js").BenchAiOptions {
+  const type = flags.ai;
+  if (!["cloud", "ollama", "custom"].includes(type)) {
+    throw new Error(`Unsupported AI provider type: ${type}`);
+  }
+  const defaultUrl = type === "ollama" ? "http://localhost:11434/v1" : "https://api.openai.com/v1";
+  const defaultModel = type === "ollama" ? "llama3.2" : "gpt-4o-mini";
+  const apiKey = flags.aiKey ?? process.env.REPO_AUDITOR_AI_KEY;
+  return {
+    provider: {
+      type: type as import("@repo-auditor/ai-review").AiProviderType,
+      baseUrl: flags.aiUrl ?? defaultUrl,
+      model: flags.aiModel ?? defaultModel,
+      apiKey: apiKey || undefined,
+      dataSharingMode: "finding-snippets",
+      redactionEnabled: true,
+      timeoutMs: 120000,
+      retryLimit: 1
+    }
+  };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

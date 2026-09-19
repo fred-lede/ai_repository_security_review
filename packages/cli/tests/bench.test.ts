@@ -105,3 +105,88 @@ describe("runBench", () => {
     await fs.access(path.join(root, "out", "benchmark-report.md"));
   });
 });
+
+describe("runBench AI-augmented mode", () => {
+  const provider = {
+    type: "cloud" as const,
+    baseUrl: "https://api.example.test/v1",
+    model: "gpt-test",
+    dataSharingMode: "finding-snippets" as const,
+    redactionEnabled: true,
+    timeoutMs: 30000,
+    retryLimit: 0
+  };
+
+  it("measures precision impact of a bogus AI finding on the malicious fixture", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "bench-ai-"));
+    const specPath = await writeSpec(root, {
+      cases: [{ name: "malicious-package", target: repoFixtures("malicious-package"), expected: maliciousExpectations }]
+    });
+
+    const bogusFinding = {
+      category: "phishing",
+      filePath: "src/index.ts",
+      lineStart: 99,
+      lineEnd: 99,
+      codeSnippet: "bogus",
+      explanation: "hallucinated",
+      recommendedFix: "none"
+    };
+    const batchFinal = (newFindings: unknown[]) =>
+      JSON.stringify({ type: "final", summary: "s", notes: [], newFindings });
+    let call = 0;
+    const fetchImpl = async () => {
+      call += 1;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => "",
+        json: async () => ({
+          choices: [{ message: { content: batchFinal(call === 1 ? [bogusFinding] : []) } }]
+        })
+      };
+    };
+
+    const io = cliIo();
+    const report = await runBench(specPath, path.join(root, "out"), io, { provider }, fetchImpl);
+
+    const testCase = report.cases[0];
+    expect(testCase.metrics.precision).toBe(1);
+    expect(testCase.aiAugmented).toBeDefined();
+    expect(testCase.aiAugmented!.aiFindingsAdded).toBe(1);
+    expect(testCase.aiAugmented!.metrics.precision).toBeCloseTo(5 / 6);
+    expect(testCase.aiAugmented!.metrics.recall).toBe(1);
+    expect(report.aggregateAiAugmented).toBeDefined();
+    const markdown = await fs.readFile(path.join(root, "out", "benchmark-report.md"), "utf8");
+    expect(markdown).toContain("AI-augmented");
+  });
+
+  it("tolerates an unreachable provider through the full CLI path", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "bench-ai-e2e-"));
+    const specPath = await writeSpec(root, {
+      cases: [{ name: "benign-package", target: repoFixtures("benign-package"), expected: [] }]
+    });
+
+    const io = cliIo();
+    const program = createProgram(io);
+    await program.parseAsync([
+      "node",
+      "repo-auditor",
+      "bench",
+      "--spec",
+      specPath,
+      "--output",
+      path.join(root, "out"),
+      "--ai",
+      "ollama",
+      "--ai-url",
+      "http://localhost:1/v1",
+      "--ai-model",
+      "test-model"
+    ]);
+
+    expect(io.out.join("")).toContain("precision=");
+    const markdown = await fs.readFile(path.join(root, "out", "benchmark-report.md"), "utf8");
+    expect(markdown).toContain("Benchmark Report");
+  }, 20000);
+});
