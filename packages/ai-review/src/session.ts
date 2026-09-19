@@ -51,7 +51,7 @@ export function sessionFingerprint(provider: AiProviderConfig, findings: Finding
 export function newSession(fingerprint: string, scanPath: string, findings: Finding[]): AiReviewSession {
   const now = new Date().toISOString();
   return {
-    id: `${Date.now()}-${fingerprint}`,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${fingerprint}`,
     fingerprint,
     createdAt: now,
     updatedAt: now,
@@ -62,7 +62,7 @@ export function newSession(fingerprint: string, scanPath: string, findings: Find
   };
 }
 
-export async function saveSession(dir: string, session: AiReviewSession): Promise<void> {
+export async function saveSession(dir: string, session: AiReviewSession): Promise<boolean> {
   try {
     await fs.mkdir(dir, { recursive: true });
     session.updatedAt = new Date().toISOString();
@@ -70,8 +70,10 @@ export async function saveSession(dir: string, session: AiReviewSession): Promis
     const tmp = path.join(dir, `.${session.id}.tmp`);
     await fs.writeFile(tmp, JSON.stringify(session, null, 2));
     await fs.rename(tmp, target);
+    return true;
   } catch {
     // best-effort: session loss must never fail a review
+    return false;
   }
 }
 

@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { buildAiReviewPrompt, buildBatchPrompt, mergeAiFindingsIntoReport, normalizeAiFindings, previewProviderRequest, runAiReview } from "../src/review.js";
+import { newSession, saveSession, sessionFingerprint } from "../src/session.js";
 import type { Finding } from "@repo-auditor/scanner-core";
 import type { AiProviderConfig } from "../src/types.js";
 import type { AuditReport } from "@repo-auditor/scanner-core";
@@ -426,5 +430,91 @@ describe("mergeAiFindingsIntoReport", () => {
 
     expect(result.summary).toContain("AI review configured");
     expect(result.findingNotes).toEqual([]);
+  });
+});
+
+describe("session persistence and resume", () => {
+  const batchFinal = JSON.stringify({
+    type: "final",
+    summary: "batch summary",
+    notes: [{ findingId: "finding-1", explanation: "verified", falsePositiveNote: "none" }],
+    newFindings: []
+  });
+  const okFetch = () =>
+    vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "",
+      json: async () => ({ choices: [{ message: { content: batchFinal } }] })
+    }));
+  const runOptions = { scanPath: "fixture", maxFindingsPerBatch: 1, maxRounds: 1, reflection: false as const };
+
+  it("writes a session file and marks it done on a full run", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "ai-session-"));
+    const result = await runAiReview(report, config, { ...runOptions, sessionDir: tmp }, okFetch());
+
+    expect(result.sessionId).toBeTruthy();
+    const saved = JSON.parse(await fs.readFile(path.join(tmp, `${result.sessionId}.json`), "utf8"));
+    expect(saved.status).toBe("done");
+    expect(saved.batches).toHaveLength(1);
+    expect(result.resumedFromSession).toBeUndefined();
+  });
+
+  it("skips already-completed batches when resuming", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "ai-session-"));
+    const fingerprint = sessionFingerprint(config, report.findings);
+    const existing = {
+      ...newSession(fingerprint, "fixture", report.findings),
+      id: "resume-test-1",
+      batches: [
+        {
+          index: 0,
+          summary: "resumed batch summary",
+          notes: [{ findingId: "finding-1", explanation: "earlier", falsePositiveNote: "none" }],
+          newFindings: []
+        }
+      ]
+    };
+    await saveSession(tmp, existing);
+
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("should not be called");
+    });
+    const result = await runAiReview(report, config, { ...runOptions, sessionDir: tmp }, fetchImpl);
+
+    expect(result.resumedFromSession).toBe("resume-test-1");
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(result.summary).toContain("resumed batch summary");
+    expect(result.coverage?.covered).toContain("finding-1");
+  });
+
+  it("starts fresh when fingerprint mismatches", async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "ai-session-"));
+    const existing = {
+      ...newSession("deadbeef", "fixture", report.findings),
+      id: "resume-test-1",
+      batches: [{ index: 0, summary: "stale", notes: [], newFindings: [] }]
+    };
+    await saveSession(tmp, existing);
+
+    const fetchImpl = okFetch();
+    const result = await runAiReview(report, config, { ...runOptions, sessionDir: tmp }, fetchImpl);
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(result.resumedFromSession).toBeUndefined();
+    expect(result.sessionId).toBeTruthy();
+    expect(result.sessionId).not.toBe("resume-test-1");
+    const saved = JSON.parse(await fs.readFile(path.join(tmp, `${result.sessionId}.json`), "utf8"));
+    expect(saved.status).toBe("done");
+  });
+
+  it("tolerates save failure and still completes the review", async () => {
+    const blocker = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "ai-session-")), "blocker");
+    await fs.writeFile(blocker, "not a directory");
+
+    const result = await runAiReview(report, config, { ...runOptions, sessionDir: blocker }, okFetch());
+
+    expect(result.sessionId).toBeUndefined();
+    expect(result.summary).toBe("batch summary");
   });
 });

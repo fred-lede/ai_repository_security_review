@@ -5,6 +5,14 @@ import { correctFindingPositions } from "./position.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
 import { runReflection } from "./reflect.js";
+import {
+  findResumableSession,
+  loadSession,
+  newSession,
+  saveSession,
+  sessionFingerprint,
+  type AiReviewSession
+} from "./session.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
 import type { AiCoverage, AiNewFinding, AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
 
@@ -87,9 +95,47 @@ export async function runAiReview(
   const coveredIds = new Set<string>();
   let skippedBatches = 0;
 
+  const sessionDir = options.sessionDir;
+  let session: AiReviewSession | undefined;
+  let resumedFromSession: string | undefined;
+  const resumedIndexes = new Set<number>();
+
+  if (sessionDir) {
+    const fingerprint = sessionFingerprint(config, report.findings);
+    let existing: AiReviewSession | undefined;
+    if (options.resumeSessionId) {
+      const loaded = await loadSession(sessionDir, options.resumeSessionId);
+      if (loaded && loaded.fingerprint === fingerprint) {
+        existing = loaded;
+      }
+    } else {
+      existing = await findResumableSession(sessionDir, fingerprint);
+    }
+
+    if (existing) {
+      for (const batch of existing.batches) {
+        summaries.push(batch.summary);
+        notes.push(...batch.notes);
+        newFindings.push(...normalizeAiFindings(batch.newFindings));
+        resumedIndexes.add(batch.index);
+        for (const finding of batches[batch.index] ?? []) {
+          coveredIds.add(finding.id);
+        }
+      }
+      session = existing;
+      resumedFromSession = existing.id;
+    } else {
+      session = newSession(fingerprint, scanPath ?? report.target.localPath ?? "", report.findings);
+    }
+  }
+
   for (let index = 0; index < batches.length; index += 1) {
     const batch = batches[index];
     options.onBatchProgress?.(index, batches.length);
+
+    if (resumedIndexes.has(index)) {
+      continue;
+    }
 
     if (Date.now() >= deadline || controller.signal.aborted) {
       truncated = true;
@@ -121,6 +167,15 @@ export async function runAiReview(
       for (const finding of batch) {
         coveredIds.add(finding.id);
       }
+      if (sessionDir && session) {
+        session.batches.push({
+          index,
+          summary: loopResult.result.summary,
+          notes: loopResult.result.notes,
+          newFindings: loopResult.result.newFindings
+        });
+        await saveSession(sessionDir, session);
+      }
     } else if (loopResult.raw) {
       rawTexts.push(loopResult.raw);
       skippedBatches += 1;
@@ -135,6 +190,13 @@ export async function runAiReview(
   };
 
   const correctedNewFindings = await correctFindingPositions(newFindings, scanPath ?? "");
+
+  if (sessionDir && session) {
+    session.status = truncated ? "running" : "done";
+    if (!(await saveSession(sessionDir, session))) {
+      session = undefined;
+    }
+  }
 
   const fallback = createOfflineAiReviewPlaceholder(report, config);
   const summary =
@@ -171,7 +233,9 @@ export async function runAiReview(
     newFindings: correctedNewFindings,
     truncated,
     coverage,
-    ...(reflections ? { reflections } : {})
+    ...(reflections ? { reflections } : {}),
+    sessionId: session?.id,
+    ...(resumedFromSession ? { resumedFromSession } : {})
   };
 }
 

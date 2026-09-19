@@ -153,7 +153,7 @@ describe("session store", () => {
 
   it("saveSession does not throw for an unwritable path", async () => {
     const session = newSession(sessionFingerprint(config, findings), "/scan", findings);
-    await expect(saveSession("/dev/null/impossible", session)).resolves.toBeUndefined();
+    await expect(saveSession("/dev/null/impossible", session)).resolves.toBe(false);
   });
 
   it("loadSession rejects path-traversal-ish ids", async () => {
