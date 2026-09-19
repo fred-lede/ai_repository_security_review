@@ -233,4 +233,11 @@ describe("AI review sessions", () => {
     expect(source).toContain('resume: "續跑"');
     expect(source).toContain('resume: "续跑"');
   });
+
+  it("disables resume buttons until a scan has run", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/if \(!state\.result\) \{\s*resumeBtn\.disabled = true;\s*resumeBtn\.title = t\("noScanToResume"\);\s*\}/);
+    expect(source).toContain('noScanToResume: "Run a scan first before resuming"');
+  });
 });

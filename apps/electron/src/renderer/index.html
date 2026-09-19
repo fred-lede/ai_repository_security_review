@@ -649,7 +649,8 @@
           sessionsTitle: "Sessions",
           resume: "Resume",
           sessionInterrupted: "Interrupted",
-          sessionDone: "Done"
+          sessionDone: "Done",
+          noScanToResume: "Run a scan first before resuming"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -725,7 +726,8 @@
           sessionsTitle: "工作階段",
           resume: "續跑",
           sessionInterrupted: "已中斷",
-          sessionDone: "已完成"
+          sessionDone: "已完成",
+          noScanToResume: "請先執行掃描再續跑"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -801,7 +803,8 @@
           sessionsTitle: "会话",
           resume: "续跑",
           sessionInterrupted: "已中断",
-          sessionDone: "已完成"
+          sessionDone: "已完成",
+          noScanToResume: "请先执行扫描再续跑"
         }
       };
 
@@ -1136,6 +1139,10 @@
             resumeBtn.className = "secondary";
             resumeBtn.dataset.sessionId = entry.id;
             resumeBtn.textContent = t("resume");
+            if (!state.result) {
+              resumeBtn.disabled = true;
+              resumeBtn.title = t("noScanToResume");
+            }
             row.appendChild(resumeBtn);
           }
           container.appendChild(row);
