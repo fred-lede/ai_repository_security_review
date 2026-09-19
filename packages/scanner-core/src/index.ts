@@ -25,6 +25,8 @@ export type { BuiltinRule } from "./defaultRules.js";
 export { assessRisk } from "./risk.js";
 export { computeFinalVerdict, computeTrustScore } from "./trustScore.js";
 export type { TrustScore } from "./trustScore.js";
+export { computeMetrics, matchFindings } from "./benchmark.js";
+export type { BenchExpectation, BenchMatch, BenchMatchResult, BenchMetrics } from "./benchmark.js";
 export { compileRule, runRules } from "./rules.js";
 export type { RuleDefinition, RuleMatchCondition, RuleHandler } from "./ruleTypes.js";
 export { loadExternalRules, saveExternalRules } from "./ruleLoader.js";
