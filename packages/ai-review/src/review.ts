@@ -4,6 +4,7 @@ import { runAgentLoop, type AgentLoopResult, type AgentNote } from "./agent.js";
 import { correctFindingPositions } from "./position.js";
 import { buildProviderRequest, requestProviderCompletion, type FetchLike } from "./providers.js";
 import { redactSecrets } from "./redaction.js";
+import { runReflection } from "./reflect.js";
 import { buildTools, type ReviewToolContext } from "./tools.js";
 import type { AiCoverage, AiNewFinding, AiProviderConfig, AiReviewOptions, AiReviewResult } from "./types.js";
 
@@ -139,6 +140,28 @@ export async function runAiReview(
   const summary =
     summaries.length > 0 ? summaries.join("\n\n") : rawTexts.filter(Boolean).join("\n\n") || fallback.summary;
 
+  let reflections: AiReviewResult["reflections"];
+  if (options.reflection !== false && Date.now() < deadline && !controller.signal.aborted) {
+    const covered = new Set(coverage.covered);
+    const targets = report.findings
+      .filter(
+        (finding) =>
+          (finding.riskLevel === "Critical" || finding.riskLevel === "High") && covered.has(finding.id)
+      )
+      .sort((a, b) => (riskOrder[a.riskLevel] ?? 99) - (riskOrder[b.riskLevel] ?? 99))
+      .slice(0, 20);
+    if (targets.length > 0) {
+      try {
+        const result = await runReflection(targets, report, config, { scanPath: scanPath ?? "" }, fetchImpl);
+        if (result.reflections.length > 0) {
+          reflections = result.reflections;
+        }
+      } catch {
+        // reflection failure must not fail the review
+      }
+    }
+  }
+
   return {
     providerType: config.type,
     model: config.model,
@@ -147,7 +170,8 @@ export async function runAiReview(
     findingNotes: notes.length > 0 ? mergeNotes(fallback.findingNotes, notes) : fallback.findingNotes,
     newFindings: correctedNewFindings,
     truncated,
-    coverage
+    coverage,
+    ...(reflections ? { reflections } : {})
   };
 }
 

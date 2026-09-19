@@ -365,6 +365,61 @@ describe("mergeAiFindingsIntoReport", () => {
     });
   });
 
+  describe("adversarial reflection pass", () => {
+    const batchFinal = JSON.stringify({
+      type: "final",
+      summary: "s",
+      notes: [{ findingId: "finding-1", explanation: "e" }],
+      newFindings: []
+    });
+    const reflectionFinal = JSON.stringify({
+      type: "final",
+      reflections: [{ findingId: "finding-1", verdict: "likely-false-positive", reasoning: "guarded input" }]
+    });
+    const batchResponse = () => ({
+      ok: true,
+      status: 200,
+      text: async () => "",
+      json: async () => ({ choices: [{ message: { content: batchFinal } }] })
+    });
+    const reflectionResponse = async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "",
+      json: async () => ({ choices: [{ message: { content: reflectionFinal } }] })
+    });
+    const makeFetch = (second?: () => Promise<never>) =>
+      vi.fn()
+        .mockResolvedValueOnce(batchResponse())
+        .mockImplementationOnce(second ?? reflectionResponse);
+
+    it("runs a reflection pass on covered high-risk findings by default", async () => {
+      const fetchImpl = makeFetch();
+      const result = await runAiReview(report, config, { scanPath: "fixture" }, fetchImpl);
+
+      expect(result.reflections).toEqual([
+        expect.objectContaining({ findingId: "finding-1", verdict: "likely-false-positive" })
+      ]);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("skips reflection when options.reflection is false", async () => {
+      const fetchImpl = makeFetch();
+      const result = await runAiReview(report, config, { scanPath: "fixture", reflection: false }, fetchImpl);
+
+      expect(result.reflections).toBeUndefined();
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("still returns the review when reflection fails", async () => {
+      const fetchImpl = makeFetch(() => Promise.reject(new Error("reflection boom")));
+      const result = await runAiReview(report, config, { scanPath: "fixture" }, fetchImpl);
+
+      expect(result.summary).toBeTruthy();
+      expect(result.reflections).toBeUndefined();
+    });
+  });
+
   it("short-circuits with a placeholder when there are no findings", async () => {
     const noFindings = { ...report, findings: [] };
     const result = await runAiReview(noFindings, config, { scanPath: "fixture" });
