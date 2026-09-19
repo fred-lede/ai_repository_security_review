@@ -1,0 +1,128 @@
+name: "Repository Security Auditor"
+description: "Scan a repository for suspicious behavior with deterministic static analysis. Reports to the job summary, optionally comments on the PR, and fails the check when the decision is Block."
+
+inputs:
+  target:
+    description: "Path to scan, relative to the workspace root (default: the whole workspace)"
+    required: false
+    default: "."
+  formats:
+    description: "Comma-separated output formats (supports: markdown, json, mermaid, sarif, html)"
+    required: false
+    default: "markdown,json,sarif"
+  network-policy:
+    description: "offline rejects remote acquisition during the scan (default); online allows it"
+    required: false
+    default: "offline"
+  fail-on-block:
+    description: "Fail the job when the scan decision is Block (default: true)"
+    required: false
+    default: "true"
+  pr-comment:
+    description: "Post or update a PR comment with the markdown report (requires pull-requests: write; default: false)"
+    required: false
+    default: "false"
+
+outputs:
+  decision:
+    description: "Scan decision: Pass / Monitor / Needs Review / Block"
+    value: ${{ steps.scan.outputs.decision }}
+  report-path:
+    description: "Path to the generated markdown report"
+    value: ${{ steps.scan.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out the action
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.action_repository }}
+        ref: ${{ github.action_ref }}
+        path: _repo-auditor
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: _repo-auditor/package-lock.json
+
+    - name: Install and build
+      shell: bash
+      working-directory: _repo-auditor
+      run: |
+        npm ci --ignore-scripts
+        npm run build --workspace @repo-auditor/scanner-core
+        npm run build --workspace @repo-auditor/cli
+
+    - name: Run security scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        network_flag=""
+        if [ "${{ inputs.network-policy }}" = "offline" ]; then
+          network_flag="--offline"
+        fi
+        node _repo-auditor/packages/cli/dist/index.js scan "${{ inputs.target }}" \
+          --format "${{ inputs.formats }}" \
+          --output repo-auditor-reports \
+          $network_flag
+        code=$?
+        set -e
+        decision=$(node -e "console.log(require('./repo-auditor-reports/decision-record.json').decision)")
+        echo "decision=$decision" >> "$GITHUB_OUTPUT"
+        echo "report-path=repo-auditor-reports/report.md" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        cat repo-auditor-reports/report.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Fail on Block
+      if: inputs.fail-on-block == 'true'
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outputs.decision }}" = "Block" ]; then
+          echo "::error::Repository Security Auditor decision: Block"
+          exit 1
+        fi
+
+    - name: Comment on the pull request
+      if: inputs.pr-comment == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- repo-auditor-report -->';
+          let body = '';
+          try {
+            body = fs.readFileSync('repo-auditor-reports/report.md', 'utf8');
+          } catch {
+            core.info('No markdown report found; skipping PR comment');
+            return;
+          }
+          const maxBody = 65500 - marker.length;
+          if (body.length > maxBody) {
+            body = body.slice(0, maxBody) + '\n\n… (truncated)';
+          }
+          const content = marker + '\n' + body;
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          const existing = comments.find((c) => c.body && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: content
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: content
+            });
+          }
