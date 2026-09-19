@@ -1,0 +1,27 @@
+name: Security Scan Self-Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Repository Security Auditor
+        id: audit
+        uses: ./
+        with:
+          target: fixtures/malicious-package
+          fail-on-block: "false"
+
+      - name: Assert the action reports Block
+        run: |
+          if [ "${{ steps.audit.outputs.decision }}" != "Block" ]; then
+            echo "::error::Expected decision Block, got: ${{ steps.audit.outputs.decision }}"
+            exit 1
+          fi
+          echo "Self-test passed: decision=${{ steps.audit.outputs.decision }}"
