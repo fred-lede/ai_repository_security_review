@@ -241,3 +241,40 @@ describe("AI review sessions", () => {
     expect(source).toContain('noScanToResume: "Run a scan first before resuming"');
   });
 });
+
+describe("AI review report preview extras", () => {
+  const readRenderer = () => fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+  it("renders coverage with covered/total and skipped batches", () => {
+    const source = readRenderer();
+
+    expect(source).toMatch(/t\("aiCoverage"\)\}: \$\{coverage\.covered\.length\}\/\$\{coverage\.total\}/);
+    expect(source).toMatch(/t\("aiBatchesSkipped"\)\}: \$\{coverage\.skippedBatches\}/);
+  });
+
+  it("renders the resume state on the status line", () => {
+    const source = readRenderer();
+
+    expect(source).toMatch(/aiReview\.resumedFromSession \? ` \(\$\{t\("aiResumedFromSession"\)\}\)`/);
+  });
+
+  it("renders a reflections section with localized verdicts", () => {
+    const source = readRenderer();
+
+    expect(source).toMatch(/## \$\{t\("aiReflections"\)\}/);
+    expect(source).toMatch(/t\("aiReflectionVerdict"\)\}: \$\{localizedVerdict\(reflection\.verdict\)\}/);
+    expect(source).toContain("const reflectionVerdictLabels = {");
+  });
+
+  it("localizes the extras in all three languages", () => {
+    const source = readRenderer();
+
+    expect(source).toContain('aiResumedFromSession: "resumed from session"');
+    expect(source).toContain('aiResumedFromSession: "自工作階段續跑"');
+    expect(source).toContain('aiResumedFromSession: "自会话续跑"');
+    expect(source).toContain('aiReflections: "AI 反思"');
+    expect(source).toContain('aiReflections: "AI 反思"');
+    expect(source).toContain('aiCoverage: "AI 覆蓋度"');
+    expect(source).toContain('aiCoverage: "AI 覆盖度"');
+  });
+});

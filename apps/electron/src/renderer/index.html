@@ -646,6 +646,11 @@
           aiSaferPattern: "Safer pattern",
           aiNewFindings: "New Findings by AI",
           aiNone: "None",
+          aiResumedFromSession: "resumed from session",
+          aiCoverage: "AI coverage",
+          aiBatchesSkipped: "skipped batches",
+          aiReflections: "AI Reflections",
+          aiReflectionVerdict: "Verdict",
           sessionsTitle: "Sessions",
           resume: "Resume",
           sessionInterrupted: "Interrupted",
@@ -723,6 +728,11 @@
           aiSaferPattern: "更安全的做法",
           aiNewFindings: "AI 新增發現",
           aiNone: "無",
+          aiResumedFromSession: "自工作階段續跑",
+          aiCoverage: "AI 覆蓋度",
+          aiBatchesSkipped: "略過批次",
+          aiReflections: "AI 反思",
+          aiReflectionVerdict: "判定",
           sessionsTitle: "工作階段",
           resume: "續跑",
           sessionInterrupted: "已中斷",
@@ -800,6 +810,11 @@
           aiSaferPattern: "更安全的做法",
           aiNewFindings: "AI 新增发现",
           aiNone: "无",
+          aiResumedFromSession: "自会话续跑",
+          aiCoverage: "AI 覆盖度",
+          aiBatchesSkipped: "跳过批次",
+          aiReflections: "AI 反思",
+          aiReflectionVerdict: "判定",
           sessionsTitle: "会话",
           resume: "续跑",
           sessionInterrupted: "已中断",
@@ -812,6 +827,12 @@
         en: { Critical: "Critical", High: "High", Medium: "Medium", Low: "Low", Info: "Info" },
         "zh-TW": { Critical: "嚴重風險", High: "高風險", Medium: "中風險", Low: "低風險", Info: "資訊" },
         "zh-CN": { Critical: "严重风险", High: "高风险", Medium: "中风险", Low: "低风险", Info: "信息" }
+      };
+
+      const reflectionVerdictLabels = {
+        en: { "reaffirmed": "reaffirmed", "likely-false-positive": "likely false positive", "uncertain": "uncertain" },
+        "zh-TW": { "reaffirmed": "重申真實", "likely-false-positive": "可能誤報", "uncertain": "不確定" },
+        "zh-CN": { "reaffirmed": "重申真实", "likely-false-positive": "可能误报", "uncertain": "不确定" }
       };
 
       const categoryLabels = {
@@ -893,6 +914,7 @@
       };
 
       function localizedRisk(r) { return riskLevelLabels[currentLang()]?.[r] ?? r; }
+      function localizedVerdict(v) { return reflectionVerdictLabels[currentLang()]?.[v] ?? v; }
       function localizedCategory(c) { return categoryLabels[currentLang()]?.[c] ?? c; }
       function localizedExplanation(e) { return explanationLabels[currentLang()]?.[e] ?? e; }
 
@@ -1496,7 +1518,13 @@
         lines.push(`## ${t("aiReviewResult")}`);
         lines.push(`- ${t("aiModel")}: ${aiReview.model || "-"}`);
         lines.push(`- ${t("aiReviewedAt")}: ${aiReview.generatedAt || "-"}`);
-        lines.push(`- ${t("aiStatus")}: ${aiReview.truncated ? t("aiStatusTruncated") : t("aiStatusComplete")}`);
+        const statusText = aiReview.truncated ? t("aiStatusTruncated") : t("aiStatusComplete");
+        lines.push(`- ${t("aiStatus")}: ${statusText}${aiReview.resumedFromSession ? ` (${t("aiResumedFromSession")})` : ""}`);
+        const coverage = aiReview.coverage;
+        if (coverage) {
+          const skipped = coverage.skippedBatches > 0 ? ` (${t("aiBatchesSkipped")}: ${coverage.skippedBatches})` : "";
+          lines.push(`- ${t("aiCoverage")}: ${coverage.covered.length}/${coverage.total}${skipped}`);
+        }
         lines.push("");
         lines.push(`## ${t("aiSummary")}`);
         lines.push(aiReview.summary || "-");
@@ -1513,6 +1541,20 @@
           if (note.falsePositiveNote) lines.push(`- ${t("aiFalsePositiveNote")}: ${note.falsePositiveNote}`);
           if (note.saferPattern) lines.push(`- ${t("aiSaferPattern")}: ${note.saferPattern}`);
           lines.push("");
+        }
+        const reflections = aiReview.reflections ?? [];
+        if (reflections.length > 0) {
+          lines.push(`## ${t("aiReflections")}`);
+          for (const reflection of reflections) {
+            const finding = findingsById.get(reflection.findingId);
+            const header = finding
+              ? `${localizedRisk(finding.riskLevel)} ${localizedCategory(finding.category)} - ${finding.filePath}`
+              : reflection.findingId;
+            lines.push(`### ${header}`);
+            lines.push(`- ${t("aiReflectionVerdict")}: ${localizedVerdict(reflection.verdict)}`);
+            if (reflection.reasoning) lines.push(`- ${reflection.reasoning}`);
+            lines.push("");
+          }
         }
         lines.push(`## ${t("aiNewFindings")}`);
         const newFindings = aiReview.newFindings ?? [];
