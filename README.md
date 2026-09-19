@@ -278,6 +278,12 @@ Data-sharing modes control how much context is sent:
 
 The agent reviews findings in per-category batches, using `file_read`/`file_find`/`code_search` tools to verify each one. It may also add new findings for the three threat families (phishing, network attack, data exfiltration) — these are marked as AI-sourced, capped at `Medium` risk with `Low` confidence, and never trigger an automatic Block. Context-window budgeting keeps prompts within the provider's limits (default 128k for cloud, 32k for Ollama), and an overall review deadline (default 10 minutes) aborts remaining batches and returns partial results with a truncation flag instead of failing.
 
+AI review extras:
+- **Position snapping** — AI-sourced line numbers are validated against the real source and corrected before reporting
+- **Coverage tracking** — the result reports which findings the AI addressed (`coverage`) and how many batches were skipped
+- **Adversarial reflection** — covered Critical/High findings get a second disproval pass (`reflections` with verdicts `reaffirmed` / `likely-false-positive` / `uncertain`); disable with `reflection: false`
+- **Session resume** — batch progress persists to disk; interrupted reviews resume instead of restarting from scratch
+
 Secret redaction automatically masks:
 - Telegram bot tokens
 - GitHub tokens
@@ -293,6 +299,32 @@ Secret redaction automatically masks:
 | `zh-CN` | Simplified Chinese |
 
 Reports, decisions, risk assessments, AI prompts, and the desktop UI all respect the selected language.
+
+## Quality Benchmark
+
+Measure scanner precision/recall against a hand-labeled ground-truth spec:
+
+```bash
+node packages/cli/dist/index.js bench --spec benchmarks/benchmarks.json --output reports/bench
+```
+
+The spec declares cases with expected findings:
+
+```json
+{
+  "cases": [
+    {
+      "name": "malicious-package",
+      "target": "../fixtures/malicious-package",
+      "expected": [
+        { "category": "command-injection", "filePath": "src/index.ts", "lineStart": 13, "lineEnd": 13 }
+      ]
+    }
+  ]
+}
+```
+
+An expectation matches a finding when category and file path are equal and, when line numbers are given, the ranges overlap. Expectations without line numbers match at file level. The command writes `benchmark-report.json` + `benchmark-report.md` with per-case and aggregate **precision** (reported issues that are real), **recall** (real issues that were found), and **F1**. A case with nothing expected and nothing found is vacuously perfect (1.0/1.0/1.0).
 
 ## Development
 

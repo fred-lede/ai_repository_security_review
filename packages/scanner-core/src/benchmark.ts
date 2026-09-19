@@ -70,14 +70,14 @@ export function matchFindings(actual: Finding[], expected: BenchExpectation[]): 
   return { truePositives, falsePositives, falseNegatives };
 }
 
-export function computeMetrics(result: BenchMatchResult): BenchMetrics {
-  const tp = result.truePositives.length;
-  const fp = result.falsePositives.length;
-  const fn = result.falseNegatives.length;
-
+export function computeMetricsFromCounts(tp: number, fp: number, fn: number): BenchMetrics {
   const precision = tp + fp === 0 ? 1 : tp / (tp + fp);
   const recall = tp + fn === 0 ? 1 : tp / (tp + fn);
   const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
 
   return { tp, fp, fn, precision, recall, f1 };
+}
+
+export function computeMetrics(result: BenchMatchResult): BenchMetrics {
+  return computeMetricsFromCounts(result.truePositives.length, result.falsePositives.length, result.falseNegatives.length);
 }

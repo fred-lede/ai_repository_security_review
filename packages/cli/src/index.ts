@@ -77,6 +77,16 @@ export function createProgram(io: CliIo = defaultIo): Command {
       }
     });
 
+  program
+    .command("bench")
+    .description("Measure scanner precision/recall against a hand-labeled benchmark spec")
+    .option("--spec <path>", "benchmark spec file", "benchmarks/benchmarks.json")
+    .option("--output <dir>", "output directory", "reports/bench")
+    .action(async (flags: { spec: string; output: string }) => {
+      const { runBench } = await import("./bench.js");
+      await runBench(flags.spec, flags.output, io);
+    });
+
   return program;
 }
 

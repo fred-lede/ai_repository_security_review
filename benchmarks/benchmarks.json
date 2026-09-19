@@ -1,0 +1,20 @@
+{
+  "cases": [
+    {
+      "name": "malicious-package",
+      "target": "../fixtures/malicious-package",
+      "expected": [
+        { "category": "postinstall-script", "filePath": "package.json", "lineStart": 1, "lineEnd": 1 },
+        { "category": "supply-chain", "filePath": "package.json", "lineStart": 1, "lineEnd": 1 },
+        { "category": "command-injection", "filePath": "src/index.ts", "lineStart": 13, "lineEnd": 13 },
+        { "category": "network", "filePath": "src/index.ts", "lineStart": 9, "lineEnd": 9 },
+        { "category": "network", "filePath": "src/index.ts", "lineStart": 13, "lineEnd": 13 }
+      ]
+    },
+    {
+      "name": "benign-package",
+      "target": "../fixtures/benign-package",
+      "expected": []
+    }
+  ]
+}
