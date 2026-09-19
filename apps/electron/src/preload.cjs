@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("repoAuditor", {
   findingReview: (payload) => invoke("finding:review", payload),
   aiModelsList: (payload) => invoke("ai-models:list", payload),
   aiConnectionTest: (payload) => invoke("ai-connection:test", payload),
+  sessionList: () => invoke("session:list"),
   folderOpen: (payload) => invoke("folder:open", payload),
   rulesLoad: () => invoke("rules:load"),
   rulesSave: (payload) => invoke("rules:save", payload),

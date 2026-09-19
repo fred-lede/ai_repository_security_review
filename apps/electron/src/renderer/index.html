@@ -510,6 +510,7 @@
         <button id="ai-review" class="secondary" data-i18n="prepareAiReview">Prepare AI Review</button>
         <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
         <div id="export-status"></div>
+        <div id="sessions" class="muted" hidden></div>
         <hr />
         <button id="edit-rules" class="secondary">Edit Rules</button>
       </aside>
@@ -644,7 +645,11 @@
           aiFalsePositiveNote: "False positive note",
           aiSaferPattern: "Safer pattern",
           aiNewFindings: "New Findings by AI",
-          aiNone: "None"
+          aiNone: "None",
+          sessionsTitle: "Sessions",
+          resume: "Resume",
+          sessionInterrupted: "Interrupted",
+          sessionDone: "Done"
         },
         "zh-TW": {
           appTitle: "Repository 安全審查工具",
@@ -716,7 +721,11 @@
           aiFalsePositiveNote: "誤報說明",
           aiSaferPattern: "更安全的做法",
           aiNewFindings: "AI 新增發現",
-          aiNone: "無"
+          aiNone: "無",
+          sessionsTitle: "工作階段",
+          resume: "續跑",
+          sessionInterrupted: "已中斷",
+          sessionDone: "已完成"
         },
         "zh-CN": {
           appTitle: "仓库安全审查工具",
@@ -788,7 +797,11 @@
           aiFalsePositiveNote: "误报说明",
           aiSaferPattern: "更安全的做法",
           aiNewFindings: "AI 新增发现",
-          aiNone: "无"
+          aiNone: "无",
+          sessionsTitle: "会话",
+          resume: "续跑",
+          sessionInterrupted: "已中断",
+          sessionDone: "已完成"
         }
       };
 
@@ -905,6 +918,7 @@
       const restoredSettings = restoreAiSettings();
       setFallbackModels(restoredSettings.model);
       void restoreApiKey().then(() => detectProviderModels());
+      void refreshSessions();
 
       const targetConfig = {
         directory: { labelKey: "dir", placeholderKey: "dirPlh", browse: true, browseType: "openDirectory" },
@@ -1041,7 +1055,21 @@
         }
       });
 
-      $("ai-review").addEventListener("click", async () => {
+      function buildProviderConfig() {
+        return {
+          language: currentLang(),
+          type: $("provider-type").value,
+          baseUrl: $("provider-url").value,
+          model: $("provider-model").value,
+          apiKey: $("provider-api-key").value || undefined,
+          dataSharingMode: $("sharing-mode").value,
+          redactionEnabled: true,
+          timeoutMs: 120000,
+          retryLimit: 1
+        };
+      }
+
+      async function runAiReviewFlow(resumeSessionId) {
         if (!state.result) return;
         const reviewBtn = $("ai-review");
         reviewBtn.disabled = true;
@@ -1061,17 +1089,8 @@
             execute: true,
             reportProgress: true,
             outputFormats,
-            provider: {
-              language: currentLang(),
-              type: $("provider-type").value,
-              baseUrl: $("provider-url").value,
-              model: $("provider-model").value,
-              apiKey: $("provider-api-key").value || undefined,
-              dataSharingMode: $("sharing-mode").value,
-              redactionEnabled: true,
-              timeoutMs: 120000,
-              retryLimit: 1
-            }
+            ...(resumeSessionId ? { resumeSessionId } : {}),
+            provider: buildProviderConfig()
           });
           if (state.aiReview.mergedReport) {
             state.result = {
@@ -1090,8 +1109,47 @@
           unsubProgress();
           reviewBtn.disabled = false;
           reviewBtn.textContent = t("prepareAiReview");
+          refreshSessions();
         }
+      }
+
+      async function refreshSessions() {
+        const list = await window.repoAuditor.sessionList().catch(() => []);
+        const container = $("sessions");
+        if (!container) return;
+        container.textContent = "";
+        if (!list || list.length === 0) {
+          container.hidden = true;
+          return;
+        }
+        const heading = document.createElement("div");
+        heading.textContent = t("sessionsTitle");
+        container.appendChild(heading);
+        for (const entry of list) {
+          const row = document.createElement("div");
+          const label = document.createElement("span");
+          const statusText = entry.status === "done" ? t("sessionDone") : t("sessionInterrupted");
+          label.textContent = `${new Date(entry.updatedAt).toLocaleString()} · ${entry.batchesDone} · ${statusText}`;
+          row.appendChild(label);
+          if (entry.status !== "done") {
+            const resumeBtn = document.createElement("button");
+            resumeBtn.className = "secondary";
+            resumeBtn.dataset.sessionId = entry.id;
+            resumeBtn.textContent = t("resume");
+            row.appendChild(resumeBtn);
+          }
+          container.appendChild(row);
+        }
+        container.hidden = false;
+      }
+
+      $("sessions").addEventListener("click", (event) => {
+        const btn = event.target.closest("button[data-session-id]");
+        if (!btn) return;
+        runAiReviewFlow(btn.dataset.sessionId);
       });
+
+      $("ai-review").addEventListener("click", () => runAiReviewFlow());
 
       $("export").addEventListener("click", async () => {
         const statusEl = $("export-status");

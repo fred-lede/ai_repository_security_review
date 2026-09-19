@@ -24,6 +24,7 @@ interface AiReviewPayload {
   execute?: boolean;
   reportProgress?: boolean;
   outputFormats?: OutputFormat[];
+  resumeSessionId?: string;
 }
 
 interface FindingReviewPayload {
@@ -225,7 +226,9 @@ ipcMain.handle("ai-review:run", async (event, payload: AiReviewPayload) => {
   const result = payload.execute
     ? await runAiReview(payload.report, provider, {
         scanPath: payload.report.target.localPath ?? undefined,
-        onBatchProgress
+        onBatchProgress,
+        sessionDir: sessionsDir,
+        ...(payload.resumeSessionId ? { resumeSessionId: payload.resumeSessionId } : {})
       })
     : createOfflineAiReviewPlaceholder(payload.report, provider);
   const mergedReport = mergeAiFindingsIntoReport(payload.report, result);
@@ -270,6 +273,12 @@ ipcMain.handle("ai-models:list", async (_event, payload: AiModelsPayload) => {
     apiKey: provider.apiKey,
     timeoutMs: 5000
   });
+});
+
+ipcMain.handle("session:list", async () => {
+  assertAllowed("session:list");
+  const { listSessions } = await import("@repo-auditor/ai-review");
+  return listSessions(sessionsDir);
 });
 
 ipcMain.handle("ai-connection:test", async (_event, payload: { provider: Pick<AiProviderConfig, "type" | "baseUrl" | "apiKey"> }) => {
@@ -327,6 +336,7 @@ ipcMain.handle("rules:save", async (_event, payload: import("@repo-auditor/scann
 });
 
 const keyFilePath = path.join(app.getPath("userData"), "repo-auditor-key.enc");
+const sessionsDir = path.join(app.getPath("userData"), "sessions");
 
 ipcMain.handle("key:save", async (_event, payload: { apiKey: string }) => {
   assertAllowed("key:save");

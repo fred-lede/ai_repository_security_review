@@ -22,7 +22,8 @@ describe("Electron IPC allowlist", () => {
       "key:save",
       "key:load",
       "key:delete",
-      "source:read"
+      "source:read",
+      "session:list"
     ]);
   });
 
@@ -183,5 +184,53 @@ describe("renderer export button", () => {
 
     expect(source).toMatch(/id="ai-review"[^>]*>[\s\S]*?<button id="export" class="secondary" data-i18n="exportReports">[\s\S]*?<div id="export-status">/);
     expect(source).not.toContain("section-footer");
+  });
+});
+
+describe("AI review sessions", () => {
+  it("allows session:list in the IPC allowlist", () => {
+    expect(isAllowedIpcChannel("session:list")).toBe(true);
+  });
+
+  it("registers a session:list handler bound to the sessions directory", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toMatch(/ipcMain\.handle\("session:list"/);
+    expect(source).toMatch(/listSessions\(sessionsDir\)/);
+    expect(source).toMatch(/sessionsDir = path\.join\(app\.getPath\("userData"\), "sessions"\)/);
+  });
+
+  it("passes sessionDir and resumeSessionId into ai-review:run", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+
+    expect(source).toMatch(/sessionDir: sessionsDir/);
+    expect(source).toMatch(/resumeSessionId: payload\.resumeSessionId/);
+    expect(source).toMatch(/resumeSessionId\?: string;/);
+  });
+
+  it("exposes sessionList on the preload bridge", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/preload.cjs"), "utf8");
+
+    expect(source).toContain("sessionList: () => invoke(\"session:list\")");
+  });
+
+  it("renders a sessions list with a resume action in the sidebar", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toMatch(/<div id="sessions" class="muted" hidden>/);
+    expect(source).toMatch(/function refreshSessions\(\)/);
+    expect(source).toMatch(/window\.repoAuditor\.sessionList\(\)/);
+    expect(source).toMatch(/resumeSessionId/);
+    expect(source).toMatch(/data-session-id/);
+  });
+
+  it("localizes the sessions UI in all three languages", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../src/renderer/index.html"), "utf8");
+
+    expect(source).toContain('sessionsTitle: "Sessions"');
+    expect(source).toContain('sessionsTitle: "工作階段"');
+    expect(source).toContain('sessionsTitle: "会话"');
+    expect(source).toContain('resume: "續跑"');
+    expect(source).toContain('resume: "续跑"');
   });
 });
