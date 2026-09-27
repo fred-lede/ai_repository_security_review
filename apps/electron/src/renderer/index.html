@@ -11,6 +11,16 @@
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: #f6f7f9;
         color: #17202a;
+        --brand: #1f6feb;
+        --panel: #ffffff;
+        --border: #d9dee7;
+        --muted: #667586;
+        --bg: #f6f7f9;
+        --risk-critical: #d1242f;
+        --risk-high: #bf8700;
+        --risk-medium: #bf8700;
+        --risk-low: #8250df;
+        --risk-info: #57606a;
       }
 
       * {
@@ -25,18 +35,22 @@
         height: 100vh;
         overflow: hidden;
         display: grid;
-        grid-template-columns: 360px minmax(0, 1fr);
+        grid-template-columns: clamp(280px, 26vw, 360px) minmax(0, 1fr);
       }
 
       aside {
         background: #ffffff;
         border-right: 1px solid #d9dee7;
-        padding: 22px;
+        padding: 22px 0;
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 0;
         min-height: 0;
-        overflow-y: auto;
+        overflow: hidden;
+      }
+
+      .settings-scroll > div {
+        padding: 0 22px;
       }
 
       section {
@@ -133,7 +147,7 @@
 
       .status {
         display: grid;
-        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 10px;
         margin-bottom: 16px;
       }
@@ -196,11 +210,19 @@
 
       .finding[data-risk="Critical"],
       .finding[data-risk="High"] {
-        border-left-color: #d1242f;
+        border-left-color: var(--risk-critical);
       }
 
       .finding[data-risk="Medium"] {
-        border-left-color: #bf8700;
+        border-left-color: var(--risk-high);
+      }
+
+      .finding[data-risk="Low"] {
+        border-left-color: var(--risk-low);
+      }
+
+      .finding[data-risk="Info"] {
+        border-left-color: var(--risk-info);
       }
 
       .finding.expanded .finding-detail { display: block; }
@@ -243,6 +265,111 @@
 
       .hint.success {
         color: #1a7f37;
+      }
+
+      /* Sticky actions footer: primary CTA always visible */
+      .settings-scroll {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .actions-footer {
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        padding: 14px 22px;
+        margin: 0 -22px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .actions-footer .pair {
+        display: flex;
+        gap: 8px;
+      }
+      .actions-footer .pair button {
+        flex: 1;
+      }
+      #edit-rules {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        min-height: 0;
+        padding: 0;
+        font-size: 13px;
+        text-align: left;
+      }
+      #edit-rules:hover {
+        color: var(--brand);
+        text-decoration: underline;
+      }
+
+      /* Section group headings */
+      aside h2 {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+      }
+      aside h2 + label,
+      aside h2 + .row {
+        margin-top: 10px;
+      }
+
+      /* Finding filter toolbar */
+      .finding-toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .finding-toolbar select {
+        width: auto;
+        min-width: 120px;
+      }
+      .finding-toolbar .chip {
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #eaeef2;
+        color: #414d5c;
+        white-space: nowrap;
+      }
+
+      /* Preview tabs */
+      .preview-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .preview-tabs button {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        min-height: 0;
+        padding: 6px 10px;
+        font-size: 12px;
+        border-bottom: 2px solid transparent;
+      }
+      .preview-tabs button.active {
+        color: var(--brand);
+        border-bottom-color: var(--brand);
+        font-weight: 600;
+      }
+
+      /* Skeleton loading */
+      @keyframes sk {
+        0% { background-position: 100% 0; }
+        100% { background-position: 0 0; }
+      }
+      .skeleton {
+        height: 14px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e2e6ea 37%, #f0f0f0 63%);
+        background-size: 400% 100%;
+        animation: sk 1.4s ease-in-out infinite;
+        margin: 8px 0;
       }
 
       #test-connection {
@@ -401,6 +528,51 @@
       .toggle-switch input:checked + .toggle-slider::before {
         transform:translateX(14px);
       }
+      /* Rules modal: cap inner list height, sticky footer */
+      #rules-modal > div > #rules-list {
+        max-height: min(50vh, 400px);
+      }
+
+      /* Accessibility: visible focus for keyboard users */
+      :focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+
+      /* Dark mode (prefers-color-scheme) */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          background: #0d1117;
+          color: #e6edf3;
+          --brand: #58a6ff;
+          --panel: #161b22;
+          --border: #30363d;
+          --muted: #8b949e;
+          --bg: #0d1117;
+          --risk-critical: #f85149;
+          --risk-high: #d29922;
+          --risk-medium: #d29922;
+          --risk-low: #d2a8ff;
+          --risk-info: #8b949e;
+        }
+        aside { background: var(--panel); }
+        .panel, .metric { background: var(--panel); border-color: var(--border); }
+        .rule-card { background: var(--panel); border-color: var(--border); }
+        input, select, textarea {
+          background: var(--bg);
+          border-color: var(--border);
+          color: #e6edf3;
+        }
+        button { color: #fff; }
+        button.secondary { background: var(--panel); }
+        .finding-code, .finding-patch, .finding-context,
+        #preview, pre { background: #0d1117; border-color: var(--border); color: #e6edf3; }
+        .finding-toolbar .chip { background: #21262d; color: #c9d1d9; }
+        .skeleton { background: linear-gradient(90deg, #21262d 25%, #30363d 37%, #21262d 63%); }
+        #rules-modal > div { background: var(--panel); }
+        .rule-card .edit-area textarea { background: var(--bg); border-color: var(--border); color: #e6edf3; }
+      }
       @media (max-width: 980px) {
         main {
           height: auto;
@@ -426,6 +598,7 @@
       <aside>
           <h1 data-i18n="appTitle">Repository Security Auditor</h1>
 
+        <div class="settings-scroll">
         <div>
           <h2 data-i18n="target">Target</h2>
           <label for="target-type" data-i18n="inputType">Input type</label>
@@ -504,15 +677,19 @@
             <option value="full-files">full-files</option>
           </select>
         </div>
+        </div>
 
-        <button id="scan" data-i18n="runScan">Run Security Audit</button>
-        <div id="scan-status"></div>
-        <button id="ai-review" class="secondary" data-i18n="prepareAiReview">Prepare AI Review</button>
-        <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
-        <div id="export-status"></div>
-        <div id="sessions" class="muted" hidden></div>
-        <hr />
-        <button id="edit-rules" class="secondary">Edit Rules</button>
+        <div class="actions-footer">
+          <button id="scan" data-i18n="runScan">Run Security Audit</button>
+          <div id="scan-status"></div>
+          <div class="pair">
+            <button id="ai-review" class="secondary" data-i18n="prepareAiReview">Prepare AI Review</button>
+            <button id="export" class="secondary" data-i18n="exportReports">Export Reports</button>
+          </div>
+          <div id="export-status"></div>
+          <div id="sessions" class="muted" hidden></div>
+          <button id="edit-rules">Edit Rules</button>
+        </div>
       </aside>
 
       <section>
@@ -530,10 +707,21 @@
         <div class="workspace">
           <div class="panel">
             <h2 data-i18n="findings">Findings</h2>
+            <div class="finding-toolbar">
+              <select id="finding-filter" aria-label="Filter findings by severity">
+                <option value="all" data-i18n="filterAll">All</option>
+                <option value="critical" data-i18n="filterCritical">Critical + High</option>
+                <option value="high" data-i18n="filterHigh" selected>High + Medium</option>
+                <option value="medium" data-i18n="filterMedium">Medium + Low</option>
+                <option value="info" data-i18n="filterInfo">Low + Info</option>
+              </select>
+              <span class="chip" id="finding-filter-count">0</span>
+            </div>
             <div id="findings" class="findings"></div>
           </div>
           <div class="panel">
             <h2 data-i18n="reportPreview">Report Preview</h2>
+            <div class="preview-tabs" id="preview-tabs" role="tablist"></div>
             <pre id="preview">No scan has run.</pre>
           </div>
         </div>
@@ -571,7 +759,7 @@
         cloud: { baseUrl: "https://api.openai.com/v1", model: "gpt-4.1" },
         custom: { baseUrl: "http://localhost:11434/v1", model: "custom-model" }
       };
-      const state = { result: null, aiReview: null };
+      const state = { result: null, aiReview: null, lastFindings: [] };
       const $ = (id) => document.getElementById(id);
 
       const ui = {
@@ -593,6 +781,15 @@
           findings: "Findings",
           reportPreview: "Report Preview",
           noScan: "No scan has run.",
+          filterAll: "All",
+          filterCritical: "Critical + High",
+          filterHigh: "High + Medium",
+          filterMedium: "Medium + Low",
+          filterInfo: "Low + Info",
+          tabMarkdown: "Markdown",
+          tabJson: "JSON",
+          tabSarif: "SARIF",
+          tabMermaid: "Mermaid",
           browse: "Browse",
           test: "Test",
           refresh: "Refresh",
@@ -675,6 +872,15 @@
           findings: "發現項目",
           reportPreview: "報告預覽",
           noScan: "尚未執行掃描。",
+          filterAll: "全部",
+          filterCritical: "嚴重 + 高",
+          filterHigh: "高 + 中",
+          filterMedium: "中 + 低",
+          filterInfo: "低 + 資訊",
+          tabMarkdown: "Markdown",
+          tabJson: "JSON",
+          tabSarif: "SARIF",
+          tabMermaid: "Mermaid",
           browse: "瀏覽",
           test: "測試",
           refresh: "重新整理",
@@ -757,6 +963,15 @@
           findings: "发现项",
           reportPreview: "报告预览",
           noScan: "尚未执行扫描。",
+          filterAll: "全部",
+          filterCritical: "严重 + 高",
+          filterHigh: "高 + 中",
+          filterMedium: "中 + 低",
+          filterInfo: "低 + 信息",
+          tabMarkdown: "Markdown",
+          tabJson: "JSON",
+          tabSarif: "SARIF",
+          tabMermaid: "Mermaid",
           browse: "浏览",
           test: "测试",
           refresh: "刷新",
@@ -972,6 +1187,10 @@
         void detectProviderModels();
       });
 
+      $("finding-filter").addEventListener("change", () => {
+        if (state.lastFindings.length > 0) renderFindings(state.lastFindings);
+      });
+
       $("browse").addEventListener("click", async () => {
         const type = $("target-type").value;
         if (type === "file") {
@@ -1056,6 +1275,7 @@
         $("decision").className = "pulse";
         scanStatus.className = "hint";
         scanStatus.innerHTML = `<span class="spinner"></span>${t("scanning")}`;
+        showSkeleton();
 
         const outputFormats = [...document.querySelectorAll('input[name="format"]:checked')].map((input) => input.value);
         try {
@@ -1076,9 +1296,41 @@
           $("decision").className = "";
           $("decision").style.color = "#d1242f";
         } finally {
+          clearSkeleton();
           scanBtn.disabled = false;
         }
       });
+
+      function showSkeleton() {
+        const findings = $("findings");
+        findings.replaceChildren(
+          ...[0, 1, 2].map(() => {
+            const bar = document.createElement("div");
+            bar.className = "skeleton";
+            return bar;
+          })
+        );
+        const preview = $("preview");
+        preview.replaceChildren(
+          ...[0, 1, 2, 3].map(() => {
+            const bar = document.createElement("div");
+            bar.className = "skeleton";
+            return bar;
+          })
+        );
+        $("preview-tabs").replaceChildren();
+      }
+
+      function clearSkeleton() {
+        // Re-render real content: findings restore via state, preview via last result.
+        if (state.result) {
+          renderResult(state.result);
+        } else {
+          $("findings").replaceChildren();
+          $("preview").textContent = t("noScan");
+          $("preview-tabs").replaceChildren();
+        }
+      }
 
       function buildProviderConfig() {
         return {
@@ -1298,218 +1550,288 @@
         $("risk").textContent = report.risk.overallRiskLevel;
         $("finding-count").textContent = String(report.findings.length);
         $("outbound-count").textContent = String(report.dataFlow.nodes.filter((node) => node.leavesMachine).length);
-        $("preview").textContent = result.outputs?.markdown || JSON.stringify(report, null, 2);
+        renderPreview(result);
+        renderFindings(report.findings);
+      }
+
+      // Findings filter + sort
+      const riskOrder = { Critical: 0, High: 1, Medium: 2, Low: 3, Info: 4 };
+      function sortFindings(fs) {
+        return [...fs].sort((a, b) => (riskOrder[a.riskLevel] - riskOrder[b.riskLevel]) || a.filePath.localeCompare(b.filePath));
+      }
+      function matchesFilter(f, filter) {
+        switch (filter) {
+          case "critical": return f.riskLevel === "Critical" || f.riskLevel === "High";
+          case "high": return f.riskLevel === "High" || f.riskLevel === "Medium";
+          case "medium": return f.riskLevel === "Medium" || f.riskLevel === "Low";
+          case "info": return f.riskLevel === "Low" || f.riskLevel === "Info";
+          default: return true;
+        }
+      }
+      function renderFindings(findings) {
+        state.lastFindings = findings;
         $("findings").replaceChildren(
-          ...report.findings.map((finding) => {
-            const el = document.createElement("div");
-            el.className = "panel finding";
-            el.dataset.risk = finding.riskLevel;
+          ...sortFindings(findings).filter((f) => matchesFilter(f, $("finding-filter").value)).map((finding) => buildFindingElement(finding))
+        );
+        updateFindingFilterCount(findings);
+      }
+      function updateFindingFilterCount(findings) {
+        $("finding-filter-count").textContent = String(findings.filter((f) => matchesFilter(f, $("finding-filter").value)).length);
+      }
 
-            const header = document.createElement("div");
-            header.className = "finding-header";
-            const lineRange = finding.lineEnd !== finding.lineStart ? `${finding.lineStart}-${finding.lineEnd}` : String(finding.lineStart);
-            header.innerHTML = `<span class="collapse-icon">▶</span><strong>${localizedRisk(finding.riskLevel)}</strong> ${localizedCategory(finding.category)}<br /><span class="muted">${finding.filePath}:${lineRange}</span>`;
+      function buildFindingElement(finding) {
+        const el = document.createElement("div");
+        el.className = "panel finding";
+        el.dataset.risk = finding.riskLevel;
 
-            const detail = document.createElement("div");
-            detail.className = "finding-detail";
+        const header = document.createElement("div");
+        header.className = "finding-header";
+        header.setAttribute("role", "button");
+        header.tabIndex = 0;
+        const lineRange = finding.lineEnd !== finding.lineStart ? `${finding.lineStart}-${finding.lineEnd}` : String(finding.lineStart);
+        header.innerHTML = `<span class="collapse-icon">▶</span><strong>${localizedRisk(finding.riskLevel)}</strong> ${localizedCategory(finding.category)}<br /><span class="muted">${finding.filePath}:${lineRange}</span>`;
 
-            const explanationP = document.createElement("p");
-            explanationP.textContent = localizedExplanation(finding.explanation);
-            detail.appendChild(explanationP);
+        const detail = document.createElement("div");
+        detail.className = "finding-detail";
 
-            if (finding.codeSnippet) {
-              const h4 = document.createElement("h4");
-              h4.textContent = t("codeSnippet");
-              detail.appendChild(h4);
-              const pre = document.createElement("pre");
-              pre.className = "finding-code";
-              const code = document.createElement("code");
-              const snippetLines = finding.codeSnippet.split("\n");
-              code.textContent = finding.lineStart
-                ? snippetLines.map((line, i) => `${String(finding.lineStart + i).padStart(4)} │ ${line}`).join("\n")
-                : finding.codeSnippet;
-              pre.appendChild(code);
-              detail.appendChild(pre);
+        const explanationP = document.createElement("p");
+        explanationP.textContent = localizedExplanation(finding.explanation);
+        detail.appendChild(explanationP);
+
+        if (finding.codeSnippet) {
+          const h4 = document.createElement("h4");
+          h4.textContent = t("codeSnippet");
+          detail.appendChild(h4);
+          const pre = document.createElement("pre");
+          pre.className = "finding-code";
+          const code = document.createElement("code");
+          const snippetLines = finding.codeSnippet.split("\n");
+          code.textContent = finding.lineStart
+            ? snippetLines.map((line, i) => `${String(finding.lineStart + i).padStart(4)} │ ${line}`).join("\n")
+            : finding.codeSnippet;
+          pre.appendChild(code);
+          detail.appendChild(pre);
+        }
+
+        if (finding.recommendedFix) {
+          const h4 = document.createElement("h4");
+          h4.textContent = t("recommendedFix");
+          detail.appendChild(h4);
+          const p = document.createElement("p");
+          p.className = "finding-fix";
+          p.textContent = finding.recommendedFix;
+          detail.appendChild(p);
+        }
+
+        if (finding.remediation?.patchDraft) {
+          const h4 = document.createElement("h4");
+          h4.textContent = t("patchDraft");
+          detail.appendChild(h4);
+          const pre = document.createElement("pre");
+          pre.className = "finding-patch";
+          pre.textContent = finding.remediation.patchDraft;
+          detail.appendChild(pre);
+        }
+
+        const ctxBtn = document.createElement("button");
+        ctxBtn.className = "secondary";
+        ctxBtn.textContent = t("showContext");
+        ctxBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const basePath = state.result?.report?.target?.localPath || $("target").value;
+          if (!basePath) {
+            const span = document.createElement("span");
+            span.className = "muted";
+            span.textContent = t("sourceNotAvailable");
+            ctxBtn.replaceWith(span);
+            return;
+          }
+          ctxBtn.disabled = true;
+          ctxBtn.textContent = "...";
+          try {
+            const ctxResult = await window.repoAuditor.sourceRead({
+              basePath,
+              filePath: finding.filePath,
+              lineStart: finding.lineStart,
+              lineEnd: finding.lineEnd,
+              contextLines: 5
+            });
+            if (ctxResult.error) {
+              const span = document.createElement("span");
+              span.className = "muted";
+              span.textContent = t("sourceNotAvailable");
+              ctxBtn.replaceWith(span);
+              return;
             }
+            const pre = document.createElement("pre");
+            pre.className = "finding-context";
+            pre.textContent = ctxResult.lines.map((l) => {
+              const prefix = String(l.num).padStart(4) + " │ ";
+              const isHighlight = l.num >= ctxResult.highlightedStart && l.num <= ctxResult.highlightedEnd;
+              return isHighlight ? `>>> ${prefix}${l.text}` : `    ${prefix}${l.text}`;
+            }).join("\n");
+            ctxBtn.replaceWith(pre);
+            pre.scrollIntoView({ block: "nearest" });
+          } catch {
+            const span = document.createElement("span");
+            span.className = "muted";
+            span.textContent = t("sourceNotAvailable");
+            ctxBtn.replaceWith(span);
+          }
+        });
+        detail.appendChild(ctxBtn);
 
-            if (finding.recommendedFix) {
-              const h4 = document.createElement("h4");
-              h4.textContent = t("recommendedFix");
-              detail.appendChild(h4);
-              const p = document.createElement("p");
-              p.className = "finding-fix";
-              p.textContent = finding.recommendedFix;
-              detail.appendChild(p);
+        const diveBtn = document.createElement("button");
+        diveBtn.className = "secondary";
+        diveBtn.textContent = t("aiDeepDive");
+        diveBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          diveBtn.disabled = true;
+          diveBtn.textContent = t("aiDeepDiveReviewing");
+          const out = document.createElement("div");
+          out.className = "finding-dive";
+          const statusEl = document.createElement("p");
+          statusEl.className = "muted";
+          const dotsSpan = document.createElement("span");
+          dotsSpan.className = "dots";
+          statusEl.appendChild(document.createTextNode(t("aiDeepDiveReviewing")));
+          statusEl.appendChild(dotsSpan);
+          out.appendChild(statusEl);
+          detail.appendChild(out);
+          try {
+            const res = await window.repoAuditor.findingReview({
+              finding,
+              report: state.result.report,
+              provider: {
+                type: $("provider-type").value,
+                baseUrl: $("provider-url").value,
+                model: $("provider-model").value,
+                apiKey: $("provider-api-key").value || undefined,
+                dataSharingMode: $("sharing-mode").value,
+                redactionEnabled: true,
+                timeoutMs: 120000,
+                retryLimit: 1
+              },
+              language: currentLang()
+            });
+            if (res.error) {
+              out.className = "hint error finding-dive";
+              out.textContent = `${t("aiDeepDiveFailed")}: ${res.error}`;
+              return;
             }
-
-            if (finding.remediation?.patchDraft) {
-              const h4 = document.createElement("h4");
-              h4.textContent = t("patchDraft");
-              detail.appendChild(h4);
+            if (!res.result) {
+              statusEl.remove();
+              const note = document.createElement("p");
+              note.className = "muted";
+              note.textContent = res.truncated ? t("aiDeepDiveTruncated") : t("aiDeepDiveFailed");
+              out.appendChild(note);
               const pre = document.createElement("pre");
               pre.className = "finding-patch";
-              pre.textContent = finding.remediation.patchDraft;
-              detail.appendChild(pre);
+              pre.textContent = res.raw || "-";
+              out.appendChild(pre);
+              return;
             }
-
-            const ctxBtn = document.createElement("button");
-            ctxBtn.className = "secondary";
-            ctxBtn.textContent = t("showContext");
-            ctxBtn.addEventListener("click", async (e) => {
-              e.stopPropagation();
-              const basePath = state.result?.report?.target?.localPath || $("target").value;
-              if (!basePath) {
-                const span = document.createElement("span");
-                span.className = "muted";
-                span.textContent = t("sourceNotAvailable");
-                ctxBtn.replaceWith(span);
-                return;
-              }
-              ctxBtn.disabled = true;
-              ctxBtn.textContent = "...";
-              try {
-                const ctxResult = await window.repoAuditor.sourceRead({
-                  basePath,
-                  filePath: finding.filePath,
-                  lineStart: finding.lineStart,
-                  lineEnd: finding.lineEnd,
-                  contextLines: 5
-                });
-                if (ctxResult.error) {
-                  const span = document.createElement("span");
-                  span.className = "muted";
-                  span.textContent = t("sourceNotAvailable");
-                  ctxBtn.replaceWith(span);
-                  return;
-                }
-                const pre = document.createElement("pre");
-                pre.className = "finding-context";
-                pre.textContent = ctxResult.lines.map((l) => {
-                  const prefix = String(l.num).padStart(4) + " │ ";
-                  const isHighlight = l.num >= ctxResult.highlightedStart && l.num <= ctxResult.highlightedEnd;
-                  return isHighlight ? `>>> ${prefix}${l.text}` : `    ${prefix}${l.text}`;
-                }).join("\n");
-                ctxBtn.replaceWith(pre);
-                pre.scrollIntoView({ block: "nearest" });
-              } catch {
-                const span = document.createElement("span");
-                span.className = "muted";
-                span.textContent = t("sourceNotAvailable");
-                ctxBtn.replaceWith(span);
-              }
-            });
-            detail.appendChild(ctxBtn);
-
-            const diveBtn = document.createElement("button");
-            diveBtn.className = "secondary";
+            const result = res.result;
+            statusEl.remove();
+            const verdictLabels = {
+              real: t("aiVerdictReal"),
+              "false-positive": t("aiVerdictFalsePositive"),
+              uncertain: t("aiVerdictUncertain")
+            };
+            const verdictColors = { real: "#d1242f", "false-positive": "#2da44e", uncertain: "#6c757d" };
+            const verdictEl = document.createElement("p");
+            const strong = document.createElement("strong");
+            strong.style.color = verdictColors[result.verdict] || "#6c757d";
+            strong.textContent = verdictLabels[result.verdict] || result.verdict;
+            verdictEl.appendChild(strong);
+            out.appendChild(verdictEl);
+            const analysisEl = document.createElement("p");
+            analysisEl.textContent = result.analysis;
+            out.appendChild(analysisEl);
+            if (result.fixSteps.length > 0) {
+              const h4 = document.createElement("h4");
+              h4.textContent = t("aiFixSteps");
+              out.appendChild(h4);
+              const ol = document.createElement("ol");
+              result.fixSteps.forEach((step) => {
+                const li = document.createElement("li");
+                li.textContent = step;
+                ol.appendChild(li);
+              });
+              out.appendChild(ol);
+            }
+            if (result.correctedCode) {
+              const h4 = document.createElement("h4");
+              h4.textContent = t("aiCorrectedCode");
+              out.appendChild(h4);
+              const pre = document.createElement("pre");
+              pre.className = "finding-patch";
+              pre.textContent = result.correctedCode;
+              out.appendChild(pre);
+            }
+          } catch (error) {
+            out.className = "hint error finding-dive";
+            out.textContent = `${t("aiDeepDiveFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
+          } finally {
+            diveBtn.disabled = false;
             diveBtn.textContent = t("aiDeepDive");
-            diveBtn.addEventListener("click", async (e) => {
-              e.stopPropagation();
-              diveBtn.disabled = true;
-              diveBtn.textContent = t("aiDeepDiveReviewing");
-              const out = document.createElement("div");
-              out.className = "finding-dive";
-              const statusEl = document.createElement("p");
-              statusEl.className = "muted";
-              const dotsSpan = document.createElement("span");
-              dotsSpan.className = "dots";
-              statusEl.appendChild(document.createTextNode(t("aiDeepDiveReviewing")));
-              statusEl.appendChild(dotsSpan);
-              out.appendChild(statusEl);
-              detail.appendChild(out);
-              try {
-                const res = await window.repoAuditor.findingReview({
-                  finding,
-                  report: state.result.report,
-                  provider: {
-                    type: $("provider-type").value,
-                    baseUrl: $("provider-url").value,
-                    model: $("provider-model").value,
-                    apiKey: $("provider-api-key").value || undefined,
-                    dataSharingMode: $("sharing-mode").value,
-                    redactionEnabled: true,
-                    timeoutMs: 120000,
-                    retryLimit: 1
-                  },
-                  language: currentLang()
-                });
-                if (res.error) {
-                  out.className = "hint error finding-dive";
-                  out.textContent = `${t("aiDeepDiveFailed")}: ${res.error}`;
-                  return;
-                }
-                if (!res.result) {
-                  statusEl.remove();
-                  const note = document.createElement("p");
-                  note.className = "muted";
-                  note.textContent = res.truncated ? t("aiDeepDiveTruncated") : t("aiDeepDiveFailed");
-                  out.appendChild(note);
-                  const pre = document.createElement("pre");
-                  pre.className = "finding-patch";
-                  pre.textContent = res.raw || "-";
-                  out.appendChild(pre);
-                  return;
-                }
-                const result = res.result;
-                statusEl.remove();
-                const verdictLabels = {
-                  real: t("aiVerdictReal"),
-                  "false-positive": t("aiVerdictFalsePositive"),
-                  uncertain: t("aiVerdictUncertain")
-                };
-                const verdictColors = { real: "#d1242f", "false-positive": "#2da44e", uncertain: "#6c757d" };
-                const verdictEl = document.createElement("p");
-                const strong = document.createElement("strong");
-                strong.style.color = verdictColors[result.verdict] || "#6c757d";
-                strong.textContent = verdictLabels[result.verdict] || result.verdict;
-                verdictEl.appendChild(strong);
-                out.appendChild(verdictEl);
-                const analysisEl = document.createElement("p");
-                analysisEl.textContent = result.analysis;
-                out.appendChild(analysisEl);
-                if (result.fixSteps.length > 0) {
-                  const h4 = document.createElement("h4");
-                  h4.textContent = t("aiFixSteps");
-                  out.appendChild(h4);
-                  const ol = document.createElement("ol");
-                  result.fixSteps.forEach((step) => {
-                    const li = document.createElement("li");
-                    li.textContent = step;
-                    ol.appendChild(li);
-                  });
-                  out.appendChild(ol);
-                }
-                if (result.correctedCode) {
-                  const h4 = document.createElement("h4");
-                  h4.textContent = t("aiCorrectedCode");
-                  out.appendChild(h4);
-                  const pre = document.createElement("pre");
-                  pre.className = "finding-patch";
-                  pre.textContent = result.correctedCode;
-                  out.appendChild(pre);
-                }
-              } catch (error) {
-                out.className = "hint error finding-dive";
-                out.textContent = `${t("aiDeepDiveFailed")}: ${error instanceof Error ? error.message : "unknown error"}`;
-              } finally {
-                diveBtn.disabled = false;
-                diveBtn.textContent = t("aiDeepDive");
-              }
-            });
-            detail.appendChild(diveBtn);
+          }
+        });
+        detail.appendChild(diveBtn);
 
-            el.appendChild(header);
-            el.appendChild(detail);
+        el.appendChild(header);
+        el.appendChild(detail);
 
-            header.addEventListener("click", () => {
-              const wasExpanded = el.classList.contains("expanded");
-              document.querySelectorAll(".finding.expanded").forEach((f) => f.classList.remove("expanded"));
-              if (!wasExpanded) el.classList.add("expanded");
-            });
+        header.addEventListener("click", () => toggleFinding(el));
+        header.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggleFinding(el);
+          }
+        });
 
-            return el;
+        return el;
+      }
+
+      function toggleFinding(el) {
+        const wasExpanded = el.classList.contains("expanded");
+        document.querySelectorAll(".finding.expanded").forEach((f) => {
+          f.classList.remove("expanded");
+          f.querySelector(".finding-header")?.setAttribute("aria-expanded", "false");
+        });
+        if (!wasExpanded) {
+          el.classList.add("expanded");
+          el.querySelector(".finding-header")?.setAttribute("aria-expanded", "true");
+        }
+      }
+
+      function renderPreview(result) {
+        const outputs = result.outputs || {};
+        const available = ["markdown", "json", "sarif", "mermaid"].filter((k) => outputs[k]);
+        if (available.length === 0) {
+          $("preview-tabs").replaceChildren();
+          $("preview").textContent = t("noScan");
+          return;
+        }
+        const tabLabel = { markdown: "tabMarkdown", json: "tabJson", sarif: "tabSarif", mermaid: "tabMermaid" };
+        const tabs = $("preview-tabs");
+        tabs.replaceChildren(
+          ...available.map((key) => {
+            const btn = document.createElement("button");
+            btn.textContent = t(tabLabel[key]);
+            btn.setAttribute("role", "tab");
+            btn.dataset.format = key;
+            btn.addEventListener("click", () => selectPreviewTab(key, result));
+            return btn;
           })
         );
+        selectPreviewTab(available.includes("markdown") ? "markdown" : available[0], result);
+      }
+
+      function selectPreviewTab(format, result) {
+        document.querySelectorAll("#preview-tabs button").forEach((b) => b.classList.toggle("active", b.dataset.format === format));
+        const content = result.outputs?.[format] ?? JSON.stringify(result.report, null, 2);
+        $("preview").textContent = content;
       }
 
       function renderAiReviewText(aiReview, report) {
@@ -1581,11 +1903,9 @@
       }
 
       function severityBadge(sev) {
-        const colors = { Critical:"#dc3545", High:"#fd7e14", Medium:"#ffc107", Low:"#0dcaf0", Info:"#6c757d" };
-        const textColors = { Medium:"#212529" };
-        const bg = colors[sev] || "#6c757d";
-        const tc = textColors[sev] || "#fff";
-        return `<span class="badge" style="background:${bg};color:${tc}">${sev}</span>`;
+        const colors = { Critical:"var(--risk-critical)", High:"var(--risk-high)", Medium:"var(--risk-medium)", Low:"var(--risk-low)", Info:"var(--risk-info)" };
+        const bg = colors[sev] || "var(--risk-info)";
+        return `<span class="badge" style="background:${bg};color:#fff">${sev}</span>`;
       }
 
       function matchSummary(rule) {

@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-09-27: Electron UI Design & Layout Improvements
+
+Reworked `apps/electron/src/renderer/index.html` (single-file UI) for clearer hierarchy,
+responsiveness, and accessibility:
+
+- **Sticky CTA footer**: wrapped settings in `.settings-scroll` (scrollable) and moved
+  Run / AI Review / Export into a fixed `.actions-footer`; AI Review + Export share a
+  50/50 `.pair` row, Edit Rules demoted to a text link. Primary action always visible.
+- **Responsive sidebar**: `main` grid now `clamp(280px, 26vw, 360px)` so the sidebar
+  narrows instead of the 980px breakpoint snapping the whole layout to one column.
+- **Unified risk palette**: extracted `--risk-*` CSS vars; finding left-border,
+  `severityBadge()`, and HTML-report colors all align now (High no longer amber in
+  one place / orange in another).
+- **Finding severity filter + sort**: new toolbar (All / Critical+ / High+ / Medium+ /
+  Low+), findings always sorted Critical-first; filter re-renders live.
+- **Preview tabs**: Markdown / JSON / SARIF / Mermaid tabs above the report preview
+  instead of raw single-source text.
+- **Skeleton loading**: `#findings` + `#preview` show shimmer bars during a scan,
+  distinguishing "scanning" from "no scan run".
+- **Auto-fit metrics**: `.status` uses `repeat(auto-fit, minmax(120px,1fr))`.
+- **Accessibility**: finding headers now `role=button` + `tabindex` + keyboard
+  toggle + `aria-expanded`; `:focus-visible` outlines; small buttons given min-height.
+- **Dark mode**: full `prefers-color-scheme: dark` theme on top of the new CSS vars.
+- **i18n**: added `filterAll/Critical/High/Medium/Info` + `tabMarkdown/Json/Sarif/
+  Mermaid` keys in EN/zh-TW/zh-CN and wired to the filter `<select>` + tab labels.
+- **Rules modal**: capped inner list to `min(50vh,400px)` to stop double-scroll.
+
+Tests: updated `apps/electron/tests/ipc.test.ts` assertion to the refactored preview
+code (`result.outputs?.[format]`); full suite 257 pass, the single remaining failure
+is the pre-existing Windows-specific `session.test.ts` unwritable-path test (unrelated).
+
 ## 2026-09-27: Phase 3 — Cloudflare Multi-Phase Security Audit Complete
 
 Adopted the Cloudflare `security-audit-skill` methodology (https://github.com/cloudflare/security-audit-skill):

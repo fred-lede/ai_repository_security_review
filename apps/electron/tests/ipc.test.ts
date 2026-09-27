@@ -97,7 +97,10 @@ describe("main window lifecycle", () => {
 
     expect(source).toContain("outputs: state.aiReview.mergedOutputs");
     expect(source).not.toContain("outputs: undefined");
-    expect(source).toMatch(/result\.outputs\?\.markdown/);
+    // Renderer reads report content from result.outputs (via the preview tabs),
+    // never from a nulled source.
+    expect(source).toMatch(/result\.outputs\?\.\[format\]/);
+    expect(source).toContain("result.outputs || {}");
   });
 
   it("keeps clipboard shortcuts working via an Edit menu", () => {
