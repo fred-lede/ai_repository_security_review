@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-09-27: Phase 3 — Cloudflare Multi-Phase Security Audit Complete
+
+Adopted the Cloudflare `security-audit-skill` methodology (https://github.com/cloudflare/security-audit-skill):
+a structured six-phase audit with independently verified, machine-readable findings, layered on top of the
+existing deterministic scanner.
+
+New modules in `packages/scanner-core/src/`:
+- `reconnaissance.ts` (Phase 1) — maps application type, tech stack, trust boundaries, input surfaces,
+  comparable baseline; initializes a `coverage-ledger.json` of attack-class/subsystem/entry-point units.
+- `hunting.ts` (Phase 2) — coverage-led hunting: per-attack-class hunters (`injection`, `access-control`,
+  `resource-file-handling`, `cryptography-secrets`, `electron-ipc`, `supply-chain`) with a hunting
+  methodology, disproof rules, and a coverage critic that flags gaps.
+- `validation.ts` (Phase 3) — every unique candidate gets a fresh verifier that tries to disprove it;
+  three verdicts: `confirmed` / `needs_validation` / `rejected`.
+- `structuredOutput.ts` (Phase 4) — machine-readable `findings.json` with a deterministic schema
+  validator, plus `mergePriorFindings()` for additive runs (skip known findings, carry forward evidence).
+- `independentVerification.ts` (Phase 5) — fresh pass re-checks final source claims against on-disk file
+  content; material failures demote `confirmed`→`needs_validation` and receive a second verifier.
+- `targetNeutralReporting.ts` (Phase 6) — derives `REPORT.md`, `FINDINGS-DETAIL.md`, `NEEDS-VALIDATION.md`
+  from verified records + coverage ledger.
+- `audit.ts` — orchestrates all six phases; `validateCoverageLedger()` runs after the ledger is created
+  and after each update.
+
+Integration:
+- `runFullAudit()` is exported from `index.ts`; `attachAuditToReport()` projects audit findings onto the
+  classic `AuditReport` so markdown/json/sarif/html/pdf pipelines keep working.
+- New CLI command `repo-auditor audit <target>` writes REPORT.md, FINDINGS-DETAIL.md, NEEDS-VALIDATION.md,
+  findings.json, coverage-ledger.json; `--prior <path>` supports additive runs; exits non-zero on
+  confirmed findings (CI gate ready).
+
+Verification:
+- 11 new tests in `packages/scanner-core/tests/audit.test.ts` all pass (reconnaissance, hunting+validation,
+  structured output, independent verification, target-neutral reporting, end-to-end orchestration).
+- Full workspace typecheck passes (scanner-core, ai-review, cli, electron).
+- Pre-existing unrelated failure: `packages/ai-review/tests/session.test.ts` (`/dev/null/impossible`
+  unwritable-path test) fails on Windows; untouched by this work.
+
 ## 2026-06-15: Phase 1 Report Enhancement Complete
 
 - **Task 1:** Added `html` OutputFormat, `AttackSurfaceEntry` interface, `attackSurface` field to AuditReport

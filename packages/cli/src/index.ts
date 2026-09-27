@@ -94,6 +94,82 @@ export function createProgram(io: CliIo = defaultIo): Command {
       await runBench(flags.spec, flags.output, io, aiOptions);
     });
 
+  program
+    .command("audit")
+    .description("Run a multi-phase security audit (reconnaissance, coverage-led hunting, validation, independent verification)")
+    .argument("<target>")
+    .option("--output <dir>", "output directory", "reports/audit")
+    .option("--max-hunters <n>", "maximum parallel hunting units", "8")
+    .option("--max-validators <n>", "maximum candidate validators", "0")
+    .option("--prior <path>", "prior findings.json for additive runs (repeatable)", (v: string, prev: string[]) => [...prev, v], [] as string[])
+    .action(
+      async (
+        target: string,
+        flags: { output: string; maxHunters: string; maxValidators: string; prior: string[] }
+      ) => {
+        const {
+          buildInventory,
+          resolveTarget,
+          acquireRemoteTarget,
+          writeReportBundle,
+          runFullAudit,
+          serializeFindingsDocument,
+          deserializeFindingsDocument
+        } = await import("@repo-auditor/scanner-core");
+        type FindingsDocument = import("@repo-auditor/scanner-core").FindingsDocument;
+
+        const resolved = await resolveTarget(target, {
+          reviewMode: "full-audit",
+          networkPolicy: "online",
+          outputFormats: ["markdown", "json"]
+        });
+        const scanPath = await acquireRemoteTarget(resolved);
+        if (!resolved.localPath) {
+          resolved.localPath = scanPath;
+        }
+        const inventory = await buildInventory(resolved.localPath);
+
+        const priorFindings: FindingsDocument[] = [];
+        for (const priorPath of flags.prior) {
+          const priorRaw = await fs.readFile(priorPath, "utf8");
+          priorFindings.push(deserializeFindingsDocument(priorRaw));
+        }
+
+        const audit = await runFullAudit({
+          target: resolved.source,
+          targetDir: resolved.localPath,
+          inventory,
+          priorFindings: priorFindings.length > 0 ? priorFindings : undefined,
+          maxHunters: Number.parseInt(flags.maxHunters, 10) || 8,
+          maxValidators:
+            flags.maxValidators && flags.maxValidators !== "0"
+              ? Number.parseInt(flags.maxValidators, 10)
+              : undefined
+        });
+
+        const reportDir = path.resolve(flags.output);
+        await fs.mkdir(reportDir, { recursive: true });
+
+        const written = await writeReportBundle(audit.reports, reportDir);
+        await fs.writeFile(
+          path.join(reportDir, "findings.json"),
+          serializeFindingsDocument(audit.findingsDoc)
+        );
+        await fs.writeFile(path.join(reportDir, "coverage-ledger.json"), audit.coverageLedgerJson);
+
+        io.writeOut(`Audit complete: ${written.map((f) => path.basename(f)).join(", ")}\n`);
+        io.writeOut(
+          `Findings: ${audit.findingsDoc.confirmed.length} confirmed, ${audit.findingsDoc.needs_validation.length} needs validation, ${audit.findingsDoc.rejected.length} rejected\n`
+        );
+        io.writeOut(`Verdict: ${audit.findingsDoc.confirmed.length > 0 ? "Needs Review" : "Pass"}\n`);
+        io.writeOut(`Findings file: ${path.join(reportDir, "findings.json")}\n`);
+
+        if (audit.findingsDoc.confirmed.length > 0) {
+          io.setExitCode(2);
+        }
+      }
+    );
+
   return program;
 }
 

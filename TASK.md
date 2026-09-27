@@ -36,5 +36,12 @@
   - Added unsaved changes guard on modal close, Escape key to collapse card or close modal
   - Commit: `0c57471` feat: improve rules editor with card-based UI, toggle, search, validation
 
+## Phase 3 (2026-09-27) — Cloudflare multi-phase security audit
+- Six-phase pipeline added to scanner-core (reconnaissance → coverage-led hunting →
+  candidate validation → structured output → independent verification →
+  target-neutral reporting); new `audit` CLI command; 11 new tests; full workspace
+  typecheck clean. See PROGRESS.md.
+
 ## Pending
-- (none — Phase 2 PDF export complete, ready for Phase 3 planning)
+- Phase 3 candidates remaining: Multi-Project Dashboard, CI/CD GitHub Actions security
+  gate, CVE DB lookup

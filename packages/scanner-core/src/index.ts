@@ -34,6 +34,66 @@ export { acquireRemoteTarget, cleanupRemoteDir } from "./remoteAcquisition.js";
 export { renderOutputs, scanTarget } from "./scan.js";
 export type { ScanOutputName, ScanResult } from "./scan.js";
 export { resolveTarget } from "./targetResolver.js";
+export {
+  runFullAudit,
+  validateCoverageLedger,
+  attachAuditToReport,
+  type AuditOptions,
+  type AuditResult
+} from "./audit.js";
+export {
+  runReconnaissance,
+  updateCoverageLedger,
+  findCoverageGaps,
+  serializeCoverageLedger,
+  deserializeCoverageLedger,
+  type ArchitectureSummary,
+  type CoverageLedger,
+  type CoverageUnit,
+  type TrustBoundary,
+  type InputSurface
+} from "./reconnaissance.js";
+export {
+  runHuntingPhase,
+  runCoverageCritic,
+  ATTACK_CLASS_PROMPTS,
+  type AttackClassPrompt,
+  type CandidateFinding,
+  type HunterResult
+} from "./hunting.js";
+export {
+  runValidationPhase,
+  convertToFinding,
+  filterConfirmed,
+  filterNeedsValidation,
+  filterRejected,
+  type Verdict,
+  type ValidatedFinding,
+  type VerificationRecord,
+  type ValidationResult
+} from "./validation.js";
+export {
+  buildFindingsDocument,
+  validateFindingsDocument,
+  serializeFindingsDocument,
+  deserializeFindingsDocument,
+  mergePriorFindings,
+  type FindingRecord,
+  type FindingsDocument,
+  type FindingsValidationResult
+} from "./structuredOutput.js";
+export {
+  verifyFindingRecords,
+  checkRecordClaims,
+  isMaterialReplacement,
+  type IndependentVerificationResult,
+  type VerificationOutcome
+} from "./independentVerification.js";
+export {
+  buildReportBundle,
+  writeReportBundle,
+  type ReportBundle
+} from "./targetNeutralReporting.js";
 export type { DangerousCall, DependencySource, LanguageId, LanguagePattern, NetworkEndpoint, PackageScript, ProjectInventory } from "./inventory.js";
 export type { ArchiveEntryType } from "./safeArchive.js";
 export type {
