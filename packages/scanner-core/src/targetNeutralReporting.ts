@@ -110,7 +110,7 @@ function renderRecordSummary(record: FindingRecord): string {
 
 function buildFindingsDetail(doc: FindingsDocument, architecture: ArchitectureSummary): string {
   const detailed = [...doc.confirmed, ...doc.needs_validation].filter(
-    (r) => severityOrder[r.riskLevel] ?? 9 <= 2
+    (r) => (severityOrder[r.riskLevel] ?? 9) <= 2
   );
 
   return [
